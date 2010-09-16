@@ -51,7 +51,7 @@ int count(Histogram* h)
 /**
  * Return the bin index corresponding to the median value.
  */
-int computeMedian(Histogram* h)
+float computeMedian(Histogram* h)
 {
     // Find in which bin the half total count falls in
     int i, A = 0, N_2 = count(h) / 2;

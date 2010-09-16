@@ -6,9 +6,9 @@
 #define GET_PIXEL_PTR_AT(img, row, col) img->imageData+row*3+col
 #define IMAGE_COUNT 795
 
-int main( int argc, char** argv )
+void testModelesFond()
 {
-    // 3-channel histograms for each target pixel 
+    // 3-channel histograms for each target pixel
     Histogram h10_10_r, h10_10_g, h10_10_b;
     Histogram h596_265_r, h596_265_g, h596_265_b;
     Histogram h217_137_r, h217_137_g, h217_137_b;
@@ -86,19 +86,39 @@ int main( int argc, char** argv )
         c217_137_g[i] = *(ptr+1);
         c217_137_r[i] = *(ptr+2);
 
+        // Running Gaussian average
+        // TODO
+
+        // Running temporal median filter
+        // TODO
+
         cvReleaseImage(&img);
     }
-
-    // Output histograms in CSV format
-    writeHistogram(&h10_10_r, "output/histo10x10.csv");
-    writeHistogram(&h596_265_r, "output/histo596x265.csv");
-    writeHistogram(&h217_137_r, "output/histo217x137.csv");
 
     int median_10_10 = computeMedian(&h10_10_r);
     printf("Median value for [10,10] pixel: %d\n", median_10_10);
 
     int median_596_265 = computeMedian(&h596_265_r);
     printf("Median value for [596,265] pixel: %d\n", median_596_265);
+
+    // Output histograms in CSV format
+    writeHistogram(&h10_10_r, "output/histo10x10.csv");
+    writeHistogram(&h596_265_r, "output/histo596x265.csv");
+    writeHistogram(&h217_137_r, "output/histo217x137.csv");
+}
+
+void apprendModeleFond()
+{
+}
+
+void segmentation()
+{
+}
+
+int main( int argc, char** argv )
+{
+    // Question 1: etude des modeles de fond pour 3 pixels
+    testModelesFond();
 
     return 0;
 }
