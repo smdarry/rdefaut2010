@@ -37,3 +37,54 @@ void writeHistogram(Histogram* h, char* filename)
 
     fclose(fp);
 }
+
+int count(Histogram* h)
+{
+    int i, N = 0;    
+    for(i = 0; i < GRAY_LEVELS; i++)
+    {
+        N += h->dist[i];
+    }
+    return N;
+}
+
+/**
+ * Return the bin index corresponding to the median value.
+ */
+int computeMedian(Histogram* h)
+{
+    // Find in which bin the half total count falls in
+    int i, A = 0, N_2 = count(h) / 2;
+    for(i = 0; i < GRAY_LEVELS; i++)
+    {
+        A += h->dist[i];
+        if(A > N_2)
+            return (i - 1);
+    }
+    return -1;
+}
+
+void computeAvgSdv(Histogram* h, float* avg, float* sdv)
+{
+    int i, N = count(h);
+
+    // Weighed mean
+    float a;
+    for(i = 0; i < GRAY_LEVELS; i++)
+    {
+        a += h->dist[i] * i;
+    }
+    *avg = (a / (float)N);
+
+    // Standard deviation
+    if(sdv != NULL)
+    {
+        float s, u;
+        for(i = 0; i < GRAY_LEVELS; i++)
+        {
+            u = (h->dist[i] - *avg);
+            s+= u * u * i;
+        }
+        *sdv = sqrt(s / (float)N);
+    }
+}
