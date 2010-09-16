@@ -94,5 +94,11 @@ int main( int argc, char** argv )
     writeHistogram(&h596_265_r, "output/histo596x265.csv");
     writeHistogram(&h217_137_r, "output/histo217x137.csv");
 
+    int median_10_10 = computeMedian(&h10_10_r);
+    printf("Median value for [10,10] pixel: %d\n", median_10_10);
+
+    int median_596_265 = computeMedian(&h596_265_r);
+    printf("Median value for [596,265] pixel: %d\n", median_596_265);
+
     return 0;
 }
