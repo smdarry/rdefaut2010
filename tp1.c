@@ -1,114 +1,80 @@
 #include "cv.h"
 #include "highgui.h"
 #include "histogram.h"
+#include "modeles.h"
 #include <stdio.h>
 
 #define GET_PIXEL_PTR_AT(img, row, col) img->imageData+row*3+col
 #define IMAGE_COUNT 795
 
-void testModelesFond()
+void updateModeleMedian(ModeleMedian* model, Histogram hist[3], IplImage* frame)
 {
-    // 3-channel histograms for each target pixel
-    Histogram h10_10_r, h10_10_g, h10_10_b;
-    Histogram h596_265_r, h596_265_g, h596_265_b;
-    Histogram h217_137_r, h217_137_g, h217_137_b;
+    if(model->median == NULL)
+    {
+        initModeleMedian(model, frame);
+    }
+}
 
-    initHistogram(&h10_10_r);
-    initHistogram(&h10_10_g);
-    initHistogram(&h10_10_b);
+void calculeImageMedianne(ModeleMedian* model)
+{
+}
 
-    initHistogram(&h596_265_r);
-    initHistogram(&h596_265_g);
-    initHistogram(&h596_265_b);
+void updateModeleGaussien(ModeleGaussien* model, IplImage* frame)
+{
+    if(model->mean == NULL)
+    {
+        initModeleGaussien(model, frame);
+    }
+}
 
-    initHistogram(&h217_137_r);
-    initHistogram(&h217_137_g);
-    initHistogram(&h217_137_b);
+void updateHistogramme(Histogram* h, IplImage* frame, int x, int y)
+{
+    // Pointer on pixel of first channel (blue)
+    unsigned char* ptr;
 
-    // Chronogram for each pixel
-    char c10_10_r[IMAGE_COUNT], c10_10_g[IMAGE_COUNT], c10_10_b[IMAGE_COUNT];
-    char c596_265_r[IMAGE_COUNT], c596_265_g[IMAGE_COUNT], c596_265_b[IMAGE_COUNT];
-    char c217_137_r[IMAGE_COUNT], c217_137_g[IMAGE_COUNT], c217_137_b[IMAGE_COUNT];
+    // Extract pixel at location [x, y]
+    ptr = GET_PIXEL_PTR_AT(frame, x, y);
 
-    int i, row;
+    // Update each histogram for that pixel
+    h->freq[0][*ptr]++;     // Blue
+    h->freq[1][*(ptr+1)]++; // Green
+    h->freq[2][*(ptr+2)]++; // Red
+}
+
+void apprendModeles(char* directory)
+{
+    ModeleMedian modeleMedian;
+    ModeleGaussien modeleGaussien;
+    Histogram h1, h2, h3;
+
+    initHistogram(&h1);
+    initHistogram(&h2);
+    initHistogram(&h3);
+
+    IplImage* frame = NULL;
+    int i;
     char filename[256];
-    IplImage* img;
+
     for(i = 0; i < IMAGE_COUNT; i++)
     {
-        sprintf(filename, "./View_008/frame_%04d.jpg", i);
+        sprintf(filename, "%s/frame_%04d.jpg", directory, i);
 
-        img = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
-        if(img == NULL)
+        frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(frame == NULL)
         {
-            fprintf(stdout, "Failed to load image %s\n", filename);
+            fprintf(stdout, "Erreur de lecture de l'image %s\n", filename);
             continue;
         }
 
-        // Pointer on pixel of first channel (blue)
-        unsigned char* ptr;
+        updateHistogramme(&h1, frame, 10, 10);
+        updateHistogramme(&h2, frame, 596, 265);
+        updateHistogramme(&h3, frame, 217, 137);
 
-        // Extract pixel at location [10, 10]
-        ptr = GET_PIXEL_PTR_AT(img, 10, 10);
-
-        // Update each histogram for that pixel
-        h10_10_b.dist[*ptr]++;
-        h10_10_g.dist[*(ptr+1)]++;
-        h10_10_r.dist[*(ptr+2)]++;
-
-        // Compile chronogram values
-        c10_10_b[i] = *ptr;
-        c10_10_g[i] = *(ptr+1);
-        c10_10_r[i] = *(ptr+2);
-
-        // Extract pixel at location [596, 265]
-        ptr = GET_PIXEL_PTR_AT(img, 596, 265);
-
-        // Update each histogram for that pixel
-        h596_265_b.dist[*ptr]++;
-        h596_265_g.dist[*(ptr+1)]++;
-        h596_265_r.dist[*(ptr+2)]++;
-
-        // Compile chronogram values
-        c596_265_b[i] = *ptr;
-        c596_265_g[i] = *(ptr+1);
-        c596_265_r[i] = *(ptr+2);
-
-        // Extract pixel at location [217, 137]
-        ptr = GET_PIXEL_PTR_AT(img, 217, 137);
-
-        // Update each histogram for that pixel
-        h217_137_b.dist[*ptr]++;
-        h217_137_g.dist[*(ptr+1)]++;
-        h217_137_r.dist[*(ptr+2)]++;
-
-        // Compile chronogram values
-        c217_137_b[i] = *ptr;
-        c217_137_g[i] = *(ptr+1);
-        c217_137_r[i] = *(ptr+2);
-
-        // Running Gaussian average
-        // TODO
-
-        // Running temporal median filter
-        // TODO
-
-        cvReleaseImage(&img);
+        cvReleaseImage(&frame);
     }
 
-    int median_10_10 = computeMedian(&h10_10_r);
-    printf("Median value for [10,10] pixel: %d\n", median_10_10);
-
-    int median_596_265 = computeMedian(&h596_265_r);
-    printf("Median value for [596,265] pixel: %d\n", median_596_265);
-
-    // Output histograms in CSV format
-    writeHistogram(&h10_10_r, "output/histo10x10.csv");
-    writeHistogram(&h596_265_r, "output/histo596x265.csv");
-    writeHistogram(&h217_137_r, "output/histo217x137.csv");
-}
-
-void apprendModeleFond()
-{
+    //updateModeleMedian(&modeleMedian, frame);
+    //updateModeleGaussien(&modeleGaussien, frame);
 }
 
 void segmentation()
@@ -117,8 +83,6 @@ void segmentation()
 
 int main( int argc, char** argv )
 {
-    // Question 1: etude des modeles de fond pour 3 pixels
-    testModelesFond();
-
-    return 0;
+    // Question 2: etude des modeles de fond
+    apprendModeles("View_008");
 }
