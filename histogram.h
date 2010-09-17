@@ -58,7 +58,7 @@ int count(Histogram* h, int channel)
 /**
  * Return the bin index corresponding to the median value.
  */
-float computeMedian(Histogram* h, int channel)
+float calculeMedianne(Histogram* h, int channel)
 {
     // Find in which bin the half total count falls in
     int i, A = 0, N_2 = count(h, channel) / 2;
@@ -73,7 +73,7 @@ float computeMedian(Histogram* h, int channel)
     return -1;
 }
 
-void computeAvgSdv(Histogram* h, float* avg, float* sdv, int channel)
+void calculeMoyEcartType(Histogram* h, float* avg, float* sdv, int channel)
 {
     int i, N = count(h, channel);
 

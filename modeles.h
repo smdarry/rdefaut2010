@@ -17,20 +17,28 @@ typedef struct _modeleMedian
     IplImage* median;
 } ModeleMedian;
 
-void initModeleMedian(ModeleMedian* model, IplImage* frame)
+void initModeleMedian(ModeleMedian* model, CvSize size)
 {
-     model->median = cvCreateImage(cvSize(frame->width, frame->height), 
-                                    IPL_DEPTH_32F, 3);
+     model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvSetZero(model->median);
 }
 
-void initModeleGaussien(ModeleGaussien* model, IplImage* frame)
+void initModeleGaussien(ModeleGaussien* model, CvSize size)
 {
-     model->mean = cvCreateImage(cvSize(frame->width, frame->height), 
-                                    IPL_DEPTH_32F, 3);
+     model->mean = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvSetZero(model->mean);
 
-     model->stdDev = cvCreateImage(cvSize(frame->width, frame->height), 
-                                    IPL_DEPTH_32F, 3);
+     model->stdDev = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvSetZero(model->stdDev);
+}
+
+void releaseModeleMedian(ModeleMedian* model)
+{
+    cvReleaseImage(&model->median);
+}
+
+void releaseModeleGaussien(ModeleGaussien* model)
+{
+    cvReleaseImage(&model->mean);
+    cvReleaseImage(&model->stdDev);
 }
