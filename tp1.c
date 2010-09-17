@@ -59,10 +59,8 @@ void updateModeleGaussien(ModeleGaussien* model, Histogram* h, int x, int y)
     *(ptr+2) = sdvRed;
 }
 
-void apprendModeles(char* directory)
+void apprendModeles(char* directory, ModeleMedian* mm, ModeleGaussien* mg)
 {
-    ModeleMedian modeleMedian;
-    ModeleGaussien modeleGaussien;
     Histogram h1, h2, h3;
 
     initHistogram(&h1);
@@ -96,24 +94,44 @@ void apprendModeles(char* directory)
     }
 
     // Calcule un modele median sur seulement 3 pixels
-    initModeleMedian(&modeleMedian, frameSize);
-    updateModeleMedian(&modeleMedian, &h1, 10, 10);
-    updateModeleMedian(&modeleMedian, &h2, 596, 265);
-    updateModeleMedian(&modeleMedian, &h3, 217, 137);
+    initModeleMedian(mm, frameSize);
+    updateModeleMedian(mm, &h1, 10, 10);
+    updateModeleMedian(mm, &h2, 596, 265);
+    updateModeleMedian(mm, &h3, 217, 137);
 
     // Calcule un modele Gaussien sur seulement 3 pixels
-    initModeleGaussien(&modeleGaussien, frameSize);
-    updateModeleGaussien(&modeleGaussien, &h1, 10, 10);
-    updateModeleGaussien(&modeleGaussien, &h2, 596, 265);
-    updateModeleGaussien(&modeleGaussien, &h3, 217, 137);
+    initModeleGaussien(mg, frameSize);
+    updateModeleGaussien(mg, &h1, 10, 10);
+    updateModeleGaussien(mg, &h2, 596, 265);
+    updateModeleGaussien(mg, &h3, 217, 137);
+
+    // TODO: Liberer l'espace des modeles
 }
 
-void segmentation()
+void segmentationMedianne(char* filename, float threshold, ModeleMedian* mm)
 {
+    IplImage* frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+    IplImage* absDiff = cvCreateImage(cvSize(frame->width, frame->height), 
+                                   IPL_DEPTH_8U, 3);
+    IplImage* mask = cvCreateImage(cvSize(frame->width, frame->height), 
+                                   IPL_DEPTH_8U, 1);
+    if(frame == NULL)
+    {
+        fprintf(stdout, "Erreur de lecture de l'image %s\n", filename);
+    }
+
+    cvAbsDiff(frame, mm->median, absDiff);
 }
 
 int main( int argc, char** argv )
 {
     // Question 2: etude des modeles de fond
-    apprendModeles("View_008");
+    ModeleMedian modeleMedian;
+    ModeleGaussien modeleGaussien;
+
+    apprendModeles("View_008", &modeleMedian, &modeleGaussien);
+
+    // Question 3: etude du modele de decision
+    // Segmentation d'une image donnee
+    segmentationMedianne("View_008/frame_0189.jpg", 0.7, &modeleMedian);
 }
