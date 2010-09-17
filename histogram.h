@@ -4,15 +4,18 @@
 
 typedef struct _histogram
 {
-    int dist[GRAY_LEVELS];
+    int freq[3][GRAY_LEVELS];
 } Histogram;
 
 void initHistogram(Histogram* h)
 {
-    int i;
-    for(i = 0; i < GRAY_LEVELS; i++)
+    int channel, i;
+    for(channel = 0; channel < 3; channel++)
     {
-        h->dist[i] = 0;
+        for(i = 0; i < GRAY_LEVELS; i++)
+        {
+            h->freq[channel][i] = 0;
+        }
     }
 }
 
@@ -28,22 +31,26 @@ void writeHistogram(Histogram* h, char* filename)
         return;
     }
 
-    int i;
-    for(i = 0; i < GRAY_LEVELS-1; i++)
+    int channel, i;
+    for(channel = 0; channel < 3; channel++)
     {
-        fprintf(fp, "%d,", (int)h->dist[i]);
+        for(i = 0; i < GRAY_LEVELS-1; i++)
+        {
+            fprintf(fp, "%d,", (int)h->freq[i]);
+        }
+        fprintf(fp, "%d\n", (int)h->freq[GRAY_LEVELS-1]);
     }
-    fprintf(fp, "%d\n", (int)h->dist[GRAY_LEVELS-1]);
 
     fclose(fp);
 }
 
-int count(Histogram* h)
+int count(Histogram* h, int channel)
 {
     int i, N = 0;    
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        N += h->dist[i];
+        if(channel == 0)
+            N += h->freq[channel][i];
     }
     return N;
 }
@@ -51,28 +58,31 @@ int count(Histogram* h)
 /**
  * Return the bin index corresponding to the median value.
  */
-float computeMedian(Histogram* h)
+float computeMedian(Histogram* h, int channel)
 {
     // Find in which bin the half total count falls in
-    int i, A = 0, N_2 = count(h) / 2;
+    int i, A = 0, N_2 = count(h, channel) / 2;
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        A += h->dist[i];
+        if(channel == 0)
+            A += h->freq[channel][i];
+
         if(A > N_2)
             return (i - 1);
     }
     return -1;
 }
 
-void computeAvgSdv(Histogram* h, float* avg, float* sdv)
+void computeAvgSdv(Histogram* h, float* avg, float* sdv, int channel)
 {
-    int i, N = count(h);
+    int i, N = count(h, channel);
 
     // Weighed mean
     float a;
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        a += h->dist[i] * i;
+        if(channel == 0)
+            a += h->freq[channel][i] * i;
     }
     *avg = (a / (float)N);
 
@@ -82,7 +92,7 @@ void computeAvgSdv(Histogram* h, float* avg, float* sdv)
         float s, u;
         for(i = 0; i < GRAY_LEVELS; i++)
         {
-            u = (h->dist[i] - *avg);
+            u = (h->freq[channel][i] - *avg);
             s+= u * u * i;
         }
         *sdv = sqrt(s / (float)N);
