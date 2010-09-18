@@ -1,13 +1,14 @@
 #include <stdio.h>
 
 #define GRAY_LEVELS 256
+#define GET_PTR_AT(img, row, col) img->imageData+row*3+col
 
 typedef struct _histogram
 {
     int freq[3][GRAY_LEVELS];
 } Histogram;
 
-void initHistogram(Histogram* h)
+void init(Histogram* h)
 {
     int channel, i;
     for(channel = 0; channel < 3; channel++)
@@ -19,12 +20,26 @@ void initHistogram(Histogram* h)
     }
 }
 
+void update(Histogram** h, IplImage* frame, int x, int y)
+{
+    // Pointer on pixel of first channel (blue)
+    unsigned char* ptr;
+
+    // Extract pixel at location [x, y]
+    ptr = GET_PTR_AT(frame, x, y);
+
+    // Update each histogram for that pixel
+    h[x][y].freq[0][*ptr]++;     // Blue
+    h[x][y].freq[1][*(ptr+1)]++; // Green
+    h[x][y].freq[2][*(ptr+2)]++; // Red
+}
+
 Histogram** allocHistogramMatrix(int width, int height)
 {
     Histogram** h = malloc(height * sizeof(Histogram*));
     int row;
     for(row = 0; row < height; row++)
-        h[row] = malloc(width * sizeof(Histogram));
+        h[row] = calloc(width, sizeof(Histogram));
 
     return h;
 }
@@ -37,7 +52,7 @@ void freeHistogramMatrix(Histogram** h, int width, int height)
     free(h);
 }
 
-void writeHistogram(Histogram* h, char* filename)
+void write(Histogram* h, char* filename)
 {
     FILE* fp = fopen(filename, "w+");
     if(fp == NULL)
@@ -63,8 +78,7 @@ int count(Histogram* h, int channel)
     int i, N = 0;    
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        if(channel == 0)
-            N += h->freq[channel][i];
+        N += h->freq[channel][i];
     }
     return N;
 }
@@ -72,22 +86,27 @@ int count(Histogram* h, int channel)
 /**
  * Return the bin index corresponding to the median value.
  */
-float calculeMedianne(Histogram* h, int channel)
+float computeMedian(Histogram* h, int channel)
 {
+    int N = count(h, channel);
+
     // Find in which bin the half total count falls in
-    int i, A = 0, N_2 = count(h, channel) / 2;
+    int i, A = 0, N_2 = N / 2;
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        if(channel == 0)
-            A += h->freq[channel][i];
-
+        A += h->freq[channel][i];
         if(A > N_2)
-            return (i - 1);
+        {
+            if(N % 2 == 0)
+                return i + 0.5;
+            else
+                return i;
+        }
     }
     return -1;
 }
 
-void calculeMoyEcartType(Histogram* h, float* avg, float* sdv, int channel)
+void computeAvgSdv(Histogram* h, float* avg, float* sdv, int channel)
 {
     int i, N = count(h, channel);
 
@@ -95,8 +114,7 @@ void calculeMoyEcartType(Histogram* h, float* avg, float* sdv, int channel)
     float a;
     for(i = 0; i < GRAY_LEVELS; i++)
     {
-        if(channel == 0)
-            a += h->freq[channel][i] * i;
+        a += h->freq[channel][i] * i;
     }
     *avg = (a / (float)N);
 
@@ -112,3 +130,4 @@ void calculeMoyEcartType(Histogram* h, float* avg, float* sdv, int channel)
         *sdv = sqrt(s / (float)N);
     }
 }
+
