@@ -1,7 +1,7 @@
 #include "cv.h"
 #include "highgui.h"
 #include "histogram.h"
-#include "modeles.h"
+#include "models.h"
 #include <stdio.h>
 
 #define GET_PTR_AT(img, row, col) img->imageData+row*3+col
