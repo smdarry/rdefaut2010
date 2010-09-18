@@ -7,7 +7,7 @@
 #define GET_PTR_AT(img, row, col) img->imageData+row*3+col
 #define IMAGE_COUNT 795
 
-void updateHistogramme(Histogram* h, IplImage* frame, int x, int y)
+void updateHistogram(Histogram** h, IplImage* frame, int x, int y)
 {
     // Pointer on pixel of first channel (blue)
     unsigned char* ptr;
@@ -16,16 +16,17 @@ void updateHistogramme(Histogram* h, IplImage* frame, int x, int y)
     ptr = GET_PTR_AT(frame, x, y);
 
     // Update each histogram for that pixel
-    h->freq[0][*ptr]++;     // Blue
-    h->freq[1][*(ptr+1)]++; // Green
-    h->freq[2][*(ptr+2)]++; // Red
+    h[x][y].freq[0][*ptr]++;     // Blue
+    h[x][y].freq[1][*(ptr+1)]++; // Green
+    h[x][y].freq[2][*(ptr+2)]++; // Red
 }
 
-void updateModeleMedian(ModeleMedian* model, Histogram* h, int x, int y)
+void learnMedianModel(MedianModel* model, Histogram** h, int x, int y)
 {
-    float medianBlue = calculeMedianne(h, 0);
-    float medianGreen = calculeMedianne(h, 1);
-    float medianRed = calculeMedianne(h, 2);
+    Histogram* hist = &h[x][y];
+    float medianBlue = calculeMedianne(hist, 0);
+    float medianGreen = calculeMedianne(hist, 1);
+    float medianRed = calculeMedianne(hist, 2);
     
     float* ptr = (float*)GET_PTR_AT(model->median, x, y);
 
@@ -35,14 +36,15 @@ void updateModeleMedian(ModeleMedian* model, Histogram* h, int x, int y)
     *(ptr+2) = medianRed;
 }
 
-void updateModeleGaussien(ModeleGaussien* model, Histogram* h, int x, int y)
+void learnGaussianModel(GaussianModel* model, Histogram** h, int x, int y)
 {
     float meanBlue, meanGreen, meanRed;
     float sdvBlue, sdvGreen, sdvRed;
 
-    calculeMoyEcartType(h, &meanBlue, &sdvBlue, 0);
-    calculeMoyEcartType(h, &meanGreen, &sdvGreen, 1);
-    calculeMoyEcartType(h, &meanRed, &sdvRed, 2);
+    Histogram* hist = &h[x][y];
+    calculeMoyEcartType(hist, &meanBlue, &sdvBlue, 0);
+    calculeMoyEcartType(hist, &meanGreen, &sdvGreen, 1);
+    calculeMoyEcartType(hist, &meanRed, &sdvRed, 2);
 
     // Positionne les valeurs de moyenne dans le modele
     float* ptr = (float*)GET_PTR_AT(model->mean, x, y);
@@ -59,18 +61,13 @@ void updateModeleGaussien(ModeleGaussien* model, Histogram* h, int x, int y)
     *(ptr+2) = sdvRed;
 }
 
-void apprendModeles(char* directory, ModeleMedian* mm, ModeleGaussien* mg)
+void apprendModeles(char* directory, MedianModel* mm, GaussianModel* gm)
 {
-    Histogram h1, h2, h3;
-
-    initHistogram(&h1);
-    initHistogram(&h2);
-    initHistogram(&h3);
-
     IplImage* frame = NULL;
     int i;
     char filename[256];
     CvSize frameSize = cvSize(0, 0);
+    Histogram** hist;
 
     for(i = 0; i < IMAGE_COUNT; i++)
     {
@@ -83,32 +80,50 @@ void apprendModeles(char* directory, ModeleMedian* mm, ModeleGaussien* mg)
             continue;
         }
 
-        updateHistogramme(&h1, frame, 10, 10);
-        updateHistogramme(&h2, frame, 596, 265);
-        updateHistogramme(&h3, frame, 217, 137);
-
         if(frameSize.width == 0 && frameSize.height == 0)
             frameSize = cvSize(frame->width, frame->height);
 
+        // Initialization des histo avec la premiere frame de la sequence
+        if(i == 0)
+            hist = allocHistogramMatrix(frameSize.width, frameSize.height);
+
+        // Construit l'histogramme temporel pour chaque pixel
+        int row, col;
+        for(row = 0; row < frameSize.height; row++)
+        {
+            for(col = 0; col < frameSize.width; col++)
+            {
+                updateHistogram(hist, frame, row, col);
+            }
+        }
         cvReleaseImage(&frame);
     }
 
-    // Calcule un modele median sur seulement 3 pixels
-    initModeleMedian(mm, frameSize);
-    updateModeleMedian(mm, &h1, 10, 10);
-    updateModeleMedian(mm, &h2, 596, 265);
-    updateModeleMedian(mm, &h3, 217, 137);
+    // Apprend un modele median sur chaque pixel
+    initMedianModel(mm, frameSize);
+    int row, col;
+    for(row = 0; row < frameSize.height; row++)
+    {
+        for(col = 0; col < frameSize.width; col++)
+        {
+            learnMedianModel(mm, hist, row, col);
+        }
+    }
 
-    // Calcule un modele Gaussien sur seulement 3 pixels
-    initModeleGaussien(mg, frameSize);
-    updateModeleGaussien(mg, &h1, 10, 10);
-    updateModeleGaussien(mg, &h2, 596, 265);
-    updateModeleGaussien(mg, &h3, 217, 137);
+    // Apprend un modele Gaussien sur chaque pixel
+    initGaussianModel(gm, frameSize);
+    for(row = 0; row < frameSize.height; row++)
+    {
+        for(col = 0; col < frameSize.width; col++)
+        {
+            learnGaussianModel(gm, hist, row, col);
+        }
+    }
 
-    // TODO: Liberer l'espace des modeles
+    freeHistogramMatrix(hist, frameSize.width, frameSize.height);
 }
 
-IplImage* segmentMedian(IplImage* frame, float thresh, ModeleMedian* mm)
+IplImage* segmentMedian(IplImage* frame, float thresh, MedianModel* mm)
 {
     // Allocation des images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
@@ -128,7 +143,7 @@ IplImage* segmentMedian(IplImage* frame, float thresh, ModeleMedian* mm)
     return foregrd;
 }
 
-IplImage* segmentGaussian(IplImage* frame, float thresh, ModeleGaussien* mg)
+IplImage* segmentGaussian(IplImage* frame, float thresh, GaussianModel* gm)
 {
     // Allocation des images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
@@ -137,7 +152,7 @@ IplImage* segmentGaussian(IplImage* frame, float thresh, ModeleGaussien* mg)
 
     // Applique la regle de decision
     cvCvtScale(frame, frameF, 1, 0);
-    cvAbsDiff(frameF, mg->mean, diff);
+    cvAbsDiff(frameF, gm->mean, diff);
 
     cvCvtScale(diff, foregrd, 1, 0);
     cvThreshold(foregrd, foregrd, thresh, 255, CV_THRESH_BINARY_INV);
@@ -147,30 +162,30 @@ IplImage* segmentGaussian(IplImage* frame, float thresh, ModeleGaussien* mg)
 
     return foregrd;
 }
+
 int main( int argc, char** argv )
 {
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
-    ModeleMedian modeleMedian;
-    ModeleGaussien modeleGaussien;
+    MedianModel medianModel;
+    GaussianModel gaussianModel;
 
-    apprendModeles("../View_008", &modeleMedian, &modeleGaussien);
+    apprendModeles("../View_008", &medianModel, &gaussianModel);
 
 
     /////////////////////////////////////////////////////////
     // Question 3: etude du modele de decision (segmentation)
-
     // Charge l'image a segmenter
     const char* filename = "../View_008/frame_0189.jpg";
     IplImage* frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
     if(frame == NULL)
     {
-        fprintf(stdout, "Erreur de lecture de l'image %s\n", filename);
+        fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
     }
 
-    IplImage* forMedian = segmentMedian(frame, 20.0, &modeleMedian);
-    IplImage* forGauss = segmentGaussian(frame, 20.0, &modeleGaussien);
+    IplImage* forMedian = segmentMedian(frame, 20.0, &medianModel);
+    IplImage* forGauss = segmentGaussian(frame, 20.0, &gaussianModel);
 
     cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
     cvShowImage("Foreground - Median", forMedian);
@@ -183,4 +198,7 @@ int main( int argc, char** argv )
     cvReleaseImage(&frame);
     cvReleaseImage(&forMedian);
     cvReleaseImage(&forGauss);
+
+    releaseMedianModel(&medianModel);
+    releaseGaussianModel(&gaussianModel);
 }

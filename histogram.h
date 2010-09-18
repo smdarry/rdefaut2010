@@ -19,15 +19,30 @@ void initHistogram(Histogram* h)
     }
 }
 
+Histogram** allocHistogramMatrix(int width, int height)
+{
+    Histogram** h = malloc(height * sizeof(Histogram*));
+    int row;
+    for(row = 0; row < height; row++)
+        h[row] = malloc(width * sizeof(Histogram));
+
+    return h;
+}
+
+void freeHistogramMatrix(Histogram** h, int width, int height)
+{
+    int row;
+    for(row = 0; row < height; row++)
+        free(h[row]);
+    free(h);
+}
+
 void writeHistogram(Histogram* h, char* filename)
 {
     FILE* fp = fopen(filename, "w+");
     if(fp == NULL)
     {
-        char buf[256];
-        sprintf(buf, "Could not create file '%s'\n", filename);
-        fprintf(stderr, buf);
-
+        fprintf(stderr, "Could not create file '%s'\n", filename);
         return;
     }
 
@@ -36,11 +51,10 @@ void writeHistogram(Histogram* h, char* filename)
     {
         for(i = 0; i < GRAY_LEVELS-1; i++)
         {
-            fprintf(fp, "%d,", (int)h->freq[i]);
+            fprintf(fp, "%d,", (int)h->freq[channel][i]);
         }
-        fprintf(fp, "%d\n", (int)h->freq[GRAY_LEVELS-1]);
+        fprintf(fp, "%d\n", (int)h->freq[channel][GRAY_LEVELS-1]);
     }
-
     fclose(fp);
 }
 

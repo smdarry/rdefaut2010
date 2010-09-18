@@ -6,7 +6,7 @@ typedef struct _modeleGaussien
 {
     IplImage* mean;
     IplImage* stdDev;
-} ModeleGaussien;
+} GaussianModel;
 
 /** 
  * Le modele median est represente par une image a 3 channels. Chacune contient
@@ -15,15 +15,15 @@ typedef struct _modeleGaussien
 typedef struct _modeleMedian
 {
     IplImage* median;
-} ModeleMedian;
+} MedianModel;
 
-void initModeleMedian(ModeleMedian* model, CvSize size)
+void initMedianModel(MedianModel* model, CvSize size)
 {
      model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->median);
 }
 
-void initModeleGaussien(ModeleGaussien* model, CvSize size)
+void initGaussianModel(GaussianModel* model, CvSize size)
 {
      model->mean = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->mean);
@@ -32,12 +32,12 @@ void initModeleGaussien(ModeleGaussien* model, CvSize size)
     cvZero(model->stdDev);
 }
 
-void releaseModeleMedian(ModeleMedian* model)
+void releaseMedianModel(MedianModel* model)
 {
     cvReleaseImage(&model->median);
 }
 
-void releaseModeleGaussien(ModeleGaussien* model)
+void releaseGaussianModel(GaussianModel* model)
 {
     cvReleaseImage(&model->mean);
     cvReleaseImage(&model->stdDev);
