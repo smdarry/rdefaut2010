@@ -20,16 +20,16 @@ typedef struct _modeleMedian
 void initModeleMedian(ModeleMedian* model, CvSize size)
 {
      model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
-    cvSetZero(model->median);
+    cvZero(model->median);
 }
 
 void initModeleGaussien(ModeleGaussien* model, CvSize size)
 {
      model->mean = cvCreateImage(size, IPL_DEPTH_32F, 3);
-    cvSetZero(model->mean);
+    cvZero(model->mean);
 
      model->stdDev = cvCreateImage(size, IPL_DEPTH_32F, 3);
-    cvSetZero(model->stdDev);
+    cvZero(model->stdDev);
 }
 
 void releaseModeleMedian(ModeleMedian* model)

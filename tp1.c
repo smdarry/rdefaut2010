@@ -108,30 +108,79 @@ void apprendModeles(char* directory, ModeleMedian* mm, ModeleGaussien* mg)
     // TODO: Liberer l'espace des modeles
 }
 
-void segmentationMedianne(char* filename, float threshold, ModeleMedian* mm)
+IplImage* segmentMedian(IplImage* frame, float thresh, ModeleMedian* mm)
 {
+    // Allocation des images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+
+    // Applique la regle de decision
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, mm->median, diff);
+
+    cvCvtScale(diff, foregrd, 1, 0);
+    cvThreshold(foregrd, foregrd, thresh, 255, CV_THRESH_BINARY_INV);
+
+    cvReleaseImage(&frameF);
+    cvReleaseImage(&diff);
+
+    return foregrd;
+}
+
+IplImage* segmentGaussian(IplImage* frame, float thresh, ModeleGaussien* mg)
+{
+    // Allocation des images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+
+    // Applique la regle de decision
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, mg->mean, diff);
+
+    cvCvtScale(diff, foregrd, 1, 0);
+    cvThreshold(foregrd, foregrd, thresh, 255, CV_THRESH_BINARY_INV);
+
+    cvReleaseImage(&frameF);
+    cvReleaseImage(&diff);
+
+    return foregrd;
+}
+int main( int argc, char** argv )
+{
+    ////////////////////////////////////////
+    // Question 2: etude des modeles de fond
+
+    ModeleMedian modeleMedian;
+    ModeleGaussien modeleGaussien;
+
+    apprendModeles("../View_008", &modeleMedian, &modeleGaussien);
+
+
+    /////////////////////////////////////////////////////////
+    // Question 3: etude du modele de decision (segmentation)
+
+    // Charge l'image a segmenter
+    const char* filename = "../View_008/frame_0189.jpg";
     IplImage* frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
-    IplImage* absDiff = cvCreateImage(cvSize(frame->width, frame->height), 
-                                   IPL_DEPTH_8U, 3);
-    IplImage* mask = cvCreateImage(cvSize(frame->width, frame->height), 
-                                   IPL_DEPTH_8U, 1);
     if(frame == NULL)
     {
         fprintf(stdout, "Erreur de lecture de l'image %s\n", filename);
     }
 
-    cvAbsDiff(frame, mm->median, absDiff);
-}
+    IplImage* forMedian = segmentMedian(frame, 20.0, &modeleMedian);
+    IplImage* forGauss = segmentGaussian(frame, 20.0, &modeleGaussien);
 
-int main( int argc, char** argv )
-{
-    // Question 2: etude des modeles de fond
-    ModeleMedian modeleMedian;
-    ModeleGaussien modeleGaussien;
+    cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
+    cvShowImage("Foreground - Median", forMedian);
 
-    apprendModeles("View_008", &modeleMedian, &modeleGaussien);
+    cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
+    cvShowImage("Foreground - Gaussian", forGauss);
 
-    // Question 3: etude du modele de decision
-    // Segmentation d'une image donnee
-    segmentationMedianne("View_008/frame_0189.jpg", 0.7, &modeleMedian);
+    cvWaitKey(0);
+
+    cvReleaseImage(&frame);
+    cvReleaseImage(&forMedian);
+    cvReleaseImage(&forGauss);
 }
