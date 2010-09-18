@@ -83,9 +83,7 @@ int count(Histogram* h, int channel)
     return N;
 }
 
-/**
- * Return the bin index corresponding to the median value.
- */
+/*
 float computeMedian(Histogram* h, int channel)
 {
     int N = count(h, channel);
@@ -97,14 +95,12 @@ float computeMedian(Histogram* h, int channel)
         A += h->freq[channel][i];
         if(A > N_2)
         {
-            if(N % 2 == 0)
-                return i + 0.5;
-            else
-                return i;
+            return i;
         }
     }
     return -1;
 }
+*/
 
 void computeAvgSdv(Histogram* h, float* avg, float* sdv, int channel)
 {
@@ -130,4 +126,3 @@ void computeAvgSdv(Histogram* h, float* avg, float* sdv, int channel)
         *sdv = sqrt(s / (float)N);
     }
 }
-
