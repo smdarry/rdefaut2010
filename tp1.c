@@ -1,75 +1,164 @@
 #include "cv.h"
 #include "highgui.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "histogram.h"
 #include "models.h"
-#include <stdio.h>
 
-#define GET_PTR_AT(img, row, col) img->imageData+row*3+col
 #define IMAGE_COUNT 795
+#define FRAME_BUF_SIZE 10
+#define FRAME_SAMPLING 10
 
-void updateHistogram(Histogram** h, IplImage* frame, int x, int y)
+int cmpPixel(const void *p1, const void *p2)
 {
-    // Pointer on pixel of first channel (blue)
-    unsigned char* ptr;
-
-    // Extract pixel at location [x, y]
-    ptr = GET_PTR_AT(frame, x, y);
-
-    // Update each histogram for that pixel
-    h[x][y].freq[0][*ptr]++;     // Blue
-    h[x][y].freq[1][*(ptr+1)]++; // Green
-    h[x][y].freq[2][*(ptr+2)]++; // Red
+    return *((const char*)p1) - *((const char*)p2);
 }
 
-void learnMedianModel(MedianModel* model, Histogram** h, int x, int y)
+float computeMedian(char pixelArray[], int size)
 {
-    Histogram* hist = &h[x][y];
-    float medianBlue = calculeMedianne(hist, 0);
-    float medianGreen = calculeMedianne(hist, 1);
-    float medianRed = calculeMedianne(hist, 2);
+    float median;
+    int size_2 = size / 2;
+
+    qsort(pixelArray, size, sizeof(uchar), cmpPixel);
+    if(size % 2 == 0)
+        median = (pixelArray[size_2-1] + pixelArray[size_2]) / 2.0;
+    else
+        median = pixelArray[size_2];
     
-    float* ptr = (float*)GET_PTR_AT(model->median, x, y);
-
-    // Positionne les valeurs mediannes dans le modele
-    *ptr = medianBlue;
-    *(ptr+1) = medianGreen;
-    *(ptr+2) = medianRed;
+    return median;
 }
 
-void learnGaussianModel(GaussianModel* model, Histogram** h, int x, int y)
+void computeMeanSdv(char pixelArray[], int size, float* mean, float* sdv)
 {
+    *mean = 0.0, *sdv = 0.0;
+    
+    // Moyenne
+    int i;
+    for(i = 0; i < size; i++)
+    {
+        *mean += pixelArray[i];
+    }
+    *mean /= size;
+
+    // et l'ecart-type...
+    if(sdv == NULL) return;
+
+    float sdiff;
+    for(i = 0; i < size; i++)
+    {
+        sdiff = pixelArray[i] - *mean;
+        *sdv += sdiff * sdiff;
+    }
+    *sdv = sqrt(*sdv / size);
+}
+
+void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
+{
+    CvSize fSize = cvGetSize(frameBuffer[0]);
+    int N_2 = frameCount / 2;
+
+    initMedianModel(model, fSize);
+
+    uchar* pixel;
+    char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
+    float medianBlue, medianGreen, medianRed;
+    float* ptr;
+    int row, col, i;
+    for(row = 0; row < fSize.height; row++)
+    {
+        for(col = 0; col < fSize.width; col++)
+        {
+            for(i = 0; i < frameCount; i++)
+            {
+                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], row, col);
+
+                pixelsBlue[i] = *pixel;
+                pixelsGreen[i] = *(pixel+1);
+                pixelsRed[i] = *(pixel+2);
+            }
+
+            // Calcul des mediannes
+            medianBlue = computeMedian(pixelsBlue, frameCount);
+            medianGreen = computeMedian(pixelsGreen, frameCount);
+            medianRed = computeMedian(pixelsRed, frameCount);
+
+            // Positionne les valeurs mediannes dans le modele
+            ptr = (float*)GET_PTR_AT(model->median, row, col);
+            *ptr = medianBlue;
+            *(ptr+1) = medianGreen;
+            *(ptr+2) = medianRed;
+        }
+    }
+}
+
+void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
+{
+    CvSize fSize = cvGetSize(frameBuffer[0]);
+    int N_2 = frameCount / 2;
+
+    initGaussianModel(model, fSize);
+
+    uchar* pixel;
+    char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float meanBlue, meanGreen, meanRed;
     float sdvBlue, sdvGreen, sdvRed;
+    float* ptr;
+    int row, col, i;
+    for(row = 0; row < fSize.height; row++)
+    {
+        for(col = 0; col < fSize.width; col++)
+        {
+            for(i = 0; i < frameCount; i++)
+            {
+                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], row, col);
 
-    Histogram* hist = &h[x][y];
-    calculeMoyEcartType(hist, &meanBlue, &sdvBlue, 0);
-    calculeMoyEcartType(hist, &meanGreen, &sdvGreen, 1);
-    calculeMoyEcartType(hist, &meanRed, &sdvRed, 2);
+                pixelsBlue[i] = *pixel;
+                pixelsGreen[i] = *(pixel+1);
+                pixelsRed[i] = *(pixel+2);
+            }
+            
+            // Calcul des parametres gaussiens
+            computeMeanSdv(pixelsBlue, frameCount, &meanBlue, &sdvBlue);
+            computeMeanSdv(pixelsGreen, frameCount, &meanGreen, &sdvGreen);
+            computeMeanSdv(pixelsRed, frameCount, &meanRed, &sdvRed);
 
-    // Positionne les valeurs de moyenne dans le modele
-    float* ptr = (float*)GET_PTR_AT(model->mean, x, y);
+            // Positionne les valeurs de moyenne dans le modele
+            float* ptr = (float*)GET_PTR_AT(model->mean, row, col);
 
-    *ptr = meanBlue;
-    *(ptr+1) = meanGreen;
-    *(ptr+2) = meanRed;
+            *ptr = meanBlue;
+            *(ptr+1) = meanGreen;
+            *(ptr+2) = meanRed;
 
-    // Positionne les valeurs d'ecart-type dans le modele
-    ptr = (float*)GET_PTR_AT(model->stdDev, x, y);
+            // Positionne les valeurs d'ecart-type dans le modele
+            ptr = (float*)GET_PTR_AT(model->stdDev, row, col);
 
-    *ptr = sdvBlue;
-    *(ptr+1) = sdvGreen;
-    *(ptr+2) = sdvRed;
+            *ptr = sdvBlue;
+            *(ptr+1) = sdvGreen;
+            *(ptr+2) = sdvRed;
+        }
+    }
 }
 
-void apprendModeles(char* directory, MedianModel* mm, GaussianModel* gm)
+void learnModels(char* directory, MedianModel* mm, GaussianModel* gm)
 {
     IplImage* frame = NULL;
+
+    // Un buffer circulaire permet de ne garder que les n dernieres frames
+    IplImage* frameBuffer[FRAME_BUF_SIZE];
+    int frameBufIndex = 0;
+
     int i;
+    for(i = 0; i < FRAME_BUF_SIZE; i++)
+    {
+        frameBuffer[i] = NULL;
+    }
+
     char filename[256];
     CvSize frameSize = cvSize(0, 0);
-    Histogram** hist;
 
-    for(i = 0; i < IMAGE_COUNT; i++)
+    for(i = 0; i < IMAGE_COUNT; i += FRAME_SAMPLING)
     {
         sprintf(filename, "%s/frame_%04d.jpg", directory, i);
 
@@ -82,45 +171,17 @@ void apprendModeles(char* directory, MedianModel* mm, GaussianModel* gm)
 
         if(frameSize.width == 0 && frameSize.height == 0)
             frameSize = cvSize(frame->width, frame->height);
-
-        // Initialization des histo avec la premiere frame de la sequence
-        if(i == 0)
-            hist = allocHistogramMatrix(frameSize.width, frameSize.height);
-
-        // Construit l'histogramme temporel pour chaque pixel
-        int row, col;
-        for(row = 0; row < frameSize.height; row++)
-        {
-            for(col = 0; col < frameSize.width; col++)
-            {
-                updateHistogram(hist, frame, row, col);
-            }
-        }
-        cvReleaseImage(&frame);
+        
+        // Garde l'image dans le buffer circulaire
+        frameBufIndex = (frameBufIndex + 1) % FRAME_BUF_SIZE;
+        IplImage* outdatedFrame = frameBuffer[frameBufIndex];
+        if(outdatedFrame != NULL)
+            cvReleaseImage(&outdatedFrame);
+        frameBuffer[frameBufIndex] = frame;
     }
-
-    // Apprend un modele median sur chaque pixel
-    initMedianModel(mm, frameSize);
-    int row, col;
-    for(row = 0; row < frameSize.height; row++)
-    {
-        for(col = 0; col < frameSize.width; col++)
-        {
-            learnMedianModel(mm, hist, row, col);
-        }
-    }
-
-    // Apprend un modele Gaussien sur chaque pixel
-    initGaussianModel(gm, frameSize);
-    for(row = 0; row < frameSize.height; row++)
-    {
-        for(col = 0; col < frameSize.width; col++)
-        {
-            learnGaussianModel(gm, hist, row, col);
-        }
-    }
-
-    freeHistogramMatrix(hist, frameSize.width, frameSize.height);
+    
+    learnMedianModel(mm, frameBuffer, FRAME_BUF_SIZE);
+    learnGaussianModel(gm, frameBuffer, FRAME_BUF_SIZE);
 }
 
 IplImage* segmentMedian(IplImage* frame, float thresh, MedianModel* mm)
@@ -171,7 +232,7 @@ int main( int argc, char** argv )
     MedianModel medianModel;
     GaussianModel gaussianModel;
 
-    apprendModeles("../View_008", &medianModel, &gaussianModel);
+    learnModels("../View_008", &medianModel, &gaussianModel);
 
 
     /////////////////////////////////////////////////////////
