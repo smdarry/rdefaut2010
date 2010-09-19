@@ -153,6 +153,10 @@ void computePixelStatistics(char* dir)
     writeHistogram(&h2, "output/hist_596x265.csv");
     writeHistogram(&h3, "output/hist_217x137.csv");
 
+    write(chrono1, "output/chrono_10x10.csv");
+    write(chrono2, "output/chrono_596x265.csv");
+    write(chrono3, "output/chrono_217x137.csv");
+
     cvReleaseMat(&chrono1);
     cvReleaseMat(&chrono2);
     cvReleaseMat(&chrono3);

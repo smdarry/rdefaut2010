@@ -65,7 +65,7 @@ void updateChronogram(CvMat* c, IplImage* frame, int t, int x, int y)
     // Obtient un pointeur sur la destination au temps 't'
     ptrDst = (uchar*)(c->data.ptr + t*3);
 
-    //  Mise a jour de chaque plan u temps 't'
+    // Mise a jour de chaque plan au temps 't'
     *ptrDst = *pixel;           // Blue
     *(ptrDst+1) = *(pixel+1);   // Green
     *(ptrDst+2) = *(pixel+2);   // Red
