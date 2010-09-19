@@ -111,12 +111,18 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     return foregrd;
 }
 
-void computeHistograms(char* dir)
+void computePixelStatistics(char* dir)
 {
+    // Histogrammes temporels pour 3 pixels
     Histogram h1, h2, h3;
     initHistogram(&h1);
     initHistogram(&h2);
     initHistogram(&h3);
+
+    // Chronogrammes pour 3 pixels
+    CvMat *chrono1 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
+    CvMat *chrono2 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
+    CvMat *chrono3 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
 
     char filename[256];
     IplImage* frame = NULL;
@@ -136,12 +142,20 @@ void computeHistograms(char* dir)
         updateHistogram(&h2, frame, 596, 265);
         updateHistogram(&h3, frame, 217, 137);
 
+        updateChronogram(chrono1, frame, i, 10, 10);
+        updateChronogram(chrono2, frame, i, 596, 265);
+        updateChronogram(chrono3, frame, i, 217, 137);
+
         cvReleaseImage(&frame);
     }
 
-    writeHistogram(&h1, "hist_10x10.csv");
-    writeHistogram(&h2, "hist_596x265.csv");
-    writeHistogram(&h3, "hist_217x137.csv");
+    writeHistogram(&h1, "output/hist_10x10.csv");
+    writeHistogram(&h2, "output/hist_596x265.csv");
+    writeHistogram(&h3, "output/hist_217x137.csv");
+
+    cvReleaseMat(&chrono1);
+    cvReleaseMat(&chrono2);
+    cvReleaseMat(&chrono3);
 }
 
 int main( int argc, char** argv )
@@ -150,7 +164,7 @@ int main( int argc, char** argv )
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels pour 3 pixels
-    computeHistograms("../View_008");
+    computePixelStatistics("../View_008");
 
 
     ////////////////////////////////////////
