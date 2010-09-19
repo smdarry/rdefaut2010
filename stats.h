@@ -1,17 +1,18 @@
+#include "cv.h"
 #include <math.h>
 #include <stdlib.h>
 
 int cmpPixel(const void *p1, const void *p2)
 {
-    return *((const char*)p1) - *((const char*)p2);
+    return *((const uchar*)p1) - *((const uchar*)p2);
 }
 
-float computeMedian(char pixelArray[], int size)
+float computeMedian(uchar pixelArray[], int size)
 {
     float median;
     int size_2 = size / 2;
 
-    qsort(pixelArray, size, sizeof(char), cmpPixel);
+    qsort(pixelArray, size, sizeof(uchar), cmpPixel);
     if(size % 2 == 0)
         median = (pixelArray[size_2-1] + pixelArray[size_2]) / 2.0;
     else
@@ -20,7 +21,7 @@ float computeMedian(char pixelArray[], int size)
     return median;
 }
 
-void computeMeanSdv(char pixelArray[], int size, float* mean, float* sdv)
+void computeMeanSdv(uchar pixelArray[], int size, float* mean, float* sdv)
 {
     *mean = 0.0, *sdv = 0.0;
     

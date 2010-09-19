@@ -93,7 +93,8 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
     initGaussianModel(model, fSize);
 
     uchar* pixel;
-    char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
+    uchar pixelsBlue[frameCount], pixelsGreen[frameCount], 
+          pixelsRed[frameCount];
     float meanBlue, meanGreen, meanRed;
     float sdvBlue, sdvGreen, sdvRed;
     float* ptr;

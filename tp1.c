@@ -1,10 +1,9 @@
 #include "cv.h"
 #include "highgui.h"
 
-#include <stdio.h>
-
 #include "histogram.h"
 #include "models.h"
+#include "utils.h"
 
 #define IMAGE_COUNT 795
 #define FRAME_BUF_SIZE 10
@@ -80,6 +79,10 @@ IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
 
 IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
 {
+    printByteFrame(frame, 0, "frame.csv");
+    printFrame(gm->mean, 0, "meanMatrix.csv");
+    printFrame(gm->stdDev, 0, "stdDevMatrix.csv");
+
     // Allocation des images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
@@ -133,7 +136,7 @@ int main( int argc, char** argv )
     }
 
     IplImage* forMedian = segmentMedian(frame, 40.0, &medianModel);
-    IplImage* forGauss = segmentGaussian(frame, 20.0, &gaussianModel);
+    IplImage* forGauss = segmentGaussian(frame, 1.0, &gaussianModel);
 
     cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
     cvShowImage("Foreground - Median", forMedian);
