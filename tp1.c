@@ -9,6 +9,9 @@
 #define FRAME_BUF_SIZE 10
 #define FRAME_SAMPLING 10
 
+/**
+ * TODO: Fonctionne sous la supposition que le frameBuffer sera toujours plein.
+ */
 void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interval)
 {
     // Un buffer circulaire permet de ne garder que les n dernieres frames
@@ -108,8 +111,48 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     return foregrd;
 }
 
+void computeHistograms(char* dir)
+{
+    Histogram h1, h2, h3;
+    initHistogram(&h1);
+    initHistogram(&h2);
+    initHistogram(&h3);
+
+    char filename[256];
+    IplImage* frame = NULL;
+    int i;
+    for(i = 0; i < IMAGE_COUNT; i++)
+    {
+        sprintf(filename, "%s/frame_%04d.jpg", dir, i);
+
+        frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(frame == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+
+        updateHistogram(&h1, frame, 10, 10);
+        updateHistogram(&h2, frame, 596, 265);
+        updateHistogram(&h3, frame, 217, 137);
+
+        cvReleaseImage(&frame);
+    }
+
+    writeHistogram(&h1, "hist_10x10.csv");
+    writeHistogram(&h2, "hist_596x265.csv");
+    writeHistogram(&h3, "hist_217x137.csv");
+}
+
 int main( int argc, char** argv )
 {
+    ////////////////////////////////////////
+    // Question 1: problematique de la segmentation
+
+    // Tracage des histogrammes temporels pour 3 pixels
+    computeHistograms("../View_008");
+
+
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
