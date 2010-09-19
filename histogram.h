@@ -48,7 +48,7 @@ void writeHistogram(Histogram* h, char* filename)
     {
         for(i = 0; i < GRAY_LEVELS-1; i++)
         {
-            fprintf(fp, "%d,", (int)h->freq[channel][i]);
+            fprintf(fp, "%d ", (int)h->freq[channel][i]);
         }
         fprintf(fp, "%d\n", (int)h->freq[channel][GRAY_LEVELS-1]);
     }
@@ -71,7 +71,7 @@ void updateChronogram(CvMat* c, IplImage* frame, int t, int x, int y)
     *(ptrDst+2) = *(pixel+2);   // Red
 }
 
-void write(CvMat* c, char* filename)
+void writeChronogram(CvMat* c, char* filename)
 {
     FILE* fp = fopen(filename, "w+");
     if(fp == NULL)
@@ -87,7 +87,7 @@ void write(CvMat* c, char* filename)
         for(t = 0; t < c->cols-1; t++)
         {
             ptr = (uchar*)(c->data.ptr + t*3);
-            fprintf(fp, "%d,", *(ptr+channel));
+            fprintf(fp, "%d ", *(ptr+channel));
         }
         fprintf(fp, "%d\n", *(ptr+(c->cols-1)+channel));
     }
