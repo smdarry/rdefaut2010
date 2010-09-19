@@ -33,7 +33,7 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
         frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
         if(frame == NULL)
         {
-            fprintf(stdout, "Erreur de lecture de l'image %s\n", filename);
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
             continue;
         }
 
@@ -47,19 +47,30 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
     }
 }
 
-IplImage* segmentMedian(IplImage* frame, float thresh, MedianModel* mm)
+IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
 {
     // Allocation des images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
-    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
 
-    // Applique la regle de decision
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > threshold => (P == foreground)
+    // sur chaque plan
     cvCvtScale(frame, frameF, 1, 0);
     cvAbsDiff(frameF, mm->median, diff);
 
-    cvCvtScale(diff, foregrd, 1, 0);
-    cvThreshold(foregrd, foregrd, thresh, 255, CV_THRESH_BINARY_INV);
+    cvCvtScale(diff, foregrdA, 1, 0);
+    cvThreshold(foregrdA, foregrdA, threshold, 255, CV_THRESH_BINARY_INV);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
 
     cvReleaseImage(&frameF);
     cvReleaseImage(&diff);
@@ -67,22 +78,29 @@ IplImage* segmentMedian(IplImage* frame, float thresh, MedianModel* mm)
     return foregrd;
 }
 
-IplImage* segmentGaussian(IplImage* frame, float thresh, GaussianModel* gm)
+IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
 {
     // Allocation des images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
     IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
 
-    // Applique la regle de decision
+    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
+    // sur chaque plan
     cvCvtScale(frame, frameF, 1, 0);
     cvAbsDiff(frameF, gm->mean, diff);
 
-    cvCvtScale(diff, foregrd, 1, 0);
-    cvThreshold(foregrd, foregrd, thresh, 255, CV_THRESH_BINARY_INV);
+    cvScale(gm->stdDev, threshold, k, 0.0);
+    cvSub(diff, threshold, foregrdF, NULL);
+    cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
+    cvScale(foregrdF, foregrd, 1, 0);
 
     cvReleaseImage(&frameF);
     cvReleaseImage(&diff);
+    cvReleaseImage(&threshold);
+    cvReleaseImage(&foregrdF);
 
     return foregrd;
 }
@@ -114,7 +132,7 @@ int main( int argc, char** argv )
         fprintf(stderr, "Erreur de lecture de l'image %s\n", toSegment);
     }
 
-    IplImage* forMedian = segmentMedian(frame, 20.0, &medianModel);
+    IplImage* forMedian = segmentMedian(frame, 40.0, &medianModel);
     IplImage* forGauss = segmentGaussian(frame, 20.0, &gaussianModel);
 
     cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
@@ -128,6 +146,10 @@ int main( int argc, char** argv )
     cvReleaseImage(&frame);
     cvReleaseImage(&forMedian);
     cvReleaseImage(&forGauss);
+
+
+    ////////////////////////////////////////////////////////
+    // Question 4: etude de la mise a jour de l'arriere-plan
 
     releaseMedianModel(&medianModel);
     releaseGaussianModel(&gaussianModel);
