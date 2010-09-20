@@ -49,7 +49,6 @@ void releaseGaussianModel(GaussianModel* model)
 void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
-    int N_2 = frameCount / 2;
 
     initMedianModel(model, fSize);
 
@@ -64,7 +63,7 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
         {
             for(i = 0; i < frameCount; i++)
             {
-                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], row, col);
+                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], col, row);
 
                 pixelsBlue[i] = *pixel;
                 pixelsGreen[i] = *(pixel+1);
@@ -77,7 +76,7 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             medianRed = computeMedian(pixelsRed, frameCount);
 
             // Positionne les valeurs mediannes dans le modele
-            ptr = (float*)GET_PTR_AT(model->median, row, col);
+            ptr = (float*)(model->median->imageData + fSize.width*row*3 + col*3); 
             *ptr = medianBlue;
             *(ptr+1) = medianGreen;
             *(ptr+2) = medianRed;
@@ -88,7 +87,6 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
 void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
-    int N_2 = frameCount / 2;
 
     initGaussianModel(model, fSize);
 
@@ -105,7 +103,7 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
         {
             for(i = 0; i < frameCount; i++)
             {
-                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], row, col);
+                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], col, row);
 
                 pixelsBlue[i] = *pixel;
                 pixelsGreen[i] = *(pixel+1);
@@ -118,14 +116,14 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
             computeMeanSdv(pixelsRed, frameCount, &meanRed, &sdvRed);
 
             // Positionne les valeurs de moyenne dans le modele
-            float* ptr = (float*)GET_PTR_AT(model->mean, row, col);
+            float* ptr = (float*)(model->mean->imageData + fSize.width*row*3 + col*3); 
 
             *ptr = meanBlue;
             *(ptr+1) = meanGreen;
             *(ptr+2) = meanRed;
 
             // Positionne les valeurs d'ecart-type dans le modele
-            ptr = (float*)GET_PTR_AT(model->stdDev, row, col);
+            ptr = (float*)(model->stdDev->imageData + fSize.width*row*3 + col*3); 
 
             *ptr = sdvBlue;
             *(ptr+1) = sdvGreen;
