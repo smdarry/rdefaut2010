@@ -1,5 +1,6 @@
 #include "cv.h"
 #include "stats.h"
+#include "utils.h"
 
 /** 
  * Le modele Gaussien est represente par deux images a 3 channels. L'une des 
@@ -37,13 +38,16 @@ void initGaussianModel(GaussianModel* model, CvSize size)
 
 void releaseMedianModel(MedianModel* model)
 {
-    cvReleaseImage(&model->median);
+    if(model->median != NULL)
+        cvReleaseImage(&model->median);
 }
 
 void releaseGaussianModel(GaussianModel* model)
 {
-    cvReleaseImage(&model->mean);
-    cvReleaseImage(&model->stdDev);
+    if(model->mean != NULL)
+        cvReleaseImage(&model->mean);
+    if(model->stdDev != NULL)
+        cvReleaseImage(&model->stdDev);
 }
 
 void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
@@ -55,8 +59,8 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
     uchar* pixel;
     char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float medianBlue, medianGreen, medianRed;
-    float* ptr;
-    int row, col, i;
+    float* data = (float*)model->median->imageData;
+    int row, col, i, step = model->median->widthStep;
     for(row = 0; row < fSize.height; row++)
     {
         for(col = 0; col < fSize.width; col++)
@@ -76,10 +80,9 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             medianRed = computeMedian(pixelsRed, frameCount);
 
             // Positionne les valeurs mediannes dans le modele
-            ptr = (float*)(model->median->imageData + fSize.width*row*3 + col*3); 
-            *ptr = medianBlue;
-            *(ptr+1) = medianGreen;
-            *(ptr+2) = medianRed;
+            ((float*)(data + step*row))[col*3] = medianBlue; 
+            ((float*)(data + step*row))[col*3 + 1] = medianGreen; 
+            ((float*)(data + step*row))[col*3 + 2] = medianRed; 
         }
     }
 }
