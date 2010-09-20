@@ -1,6 +1,6 @@
-A <- matrix(scan("output/chrono_10x10.mat", n = 3 * 795), 3, 795)
+A <- matrix(scan("../output/chrono_10x10.csv", n = 3 * 795, sep = ','), 3, 795)
 
-plot(A[1,], type="l", col="blue", xlab="Image no.", ylab="Intensité", main="Chronogramme du pixel [10,10]")
+plot(A[1,], type="l", col="blue", xlab="Image no.", ylab="Intensite", main="Chronogramme du pixel [10,10]")
 lines(A[2,], type="l", col="green")
 lines(A[3,], type="l", col="red")
 
