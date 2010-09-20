@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "stats.h"
+#include "utils.h"
 
 void testComputeMedian()
 {
@@ -65,9 +66,37 @@ void testComputeMeanSdv()
     printf("Expected: 0.74, Actual: %.2f\n", sdv);
 }
 
+void testCvThreshold()
+{
+    IplImage* image = cvCreateImage(cvSize(2, 5), IPL_DEPTH_32F, 3);
+    cvZero(image);
+
+    int step = image->widthStep;
+
+    int row, col;
+    for(row = 0; row < 2; row++)
+    {
+        for(col = 0; col < 5; col++)
+        {
+            ((float*)(image->imageData + step*row))[col*3] = 10.0;
+        }
+    }
+
+    for(row = 0; row < 2; row++)
+    {
+        for(col = 0; col < 5; col++)
+        {
+            float p = ((float*)(image->imageData + step*row))[col*3];
+            printf("[%d,%d] : %.2f\n", col, row, p);
+        }
+    }
+}
+
 int main( int argc, char** argv )
 {
     testComputeMedian();
     
     testComputeMeanSdv();
+
+    testCvThreshold();
 }
