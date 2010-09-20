@@ -1,7 +1,7 @@
 #include <stdio.h>
+#include "utils.h"
 
 #define GRAY_LEVELS 256
-#define GET_PTR_AT(img, x, y) img->imageData+img->widthStep*y+x*3
 
 typedef struct _histogram
 {
