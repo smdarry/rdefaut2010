@@ -3,7 +3,6 @@
 
 #include "histogram.h"
 #include "models.h"
-#include "utils.h"
 
 #define IMAGE_COUNT 795
 #define FRAME_BUF_SIZE 10
@@ -191,6 +190,8 @@ int main( int argc, char** argv )
     selectFrames("../View_008", frameBuffer, FRAME_BUF_SIZE, FRAME_SAMPLING);
     learnMedianModel(&medianModel, frameBuffer, FRAME_BUF_SIZE);
 
+    printFrame(medianModel.median, 0, "medianModel.csv");
+
     // Construction du modele Gaussien sur le meme tableau d'images
     learnGaussianModel(&gaussianModel, frameBuffer, FRAME_BUF_SIZE);
 
@@ -206,19 +207,19 @@ int main( int argc, char** argv )
     }
 
     IplImage* forMedian = segmentMedian(frame, 40.0, &medianModel);
-    IplImage* forGauss = segmentGaussian(frame, 1.0, &gaussianModel);
+//    IplImage* forGauss = segmentGaussian(frame, 1.0, &gaussianModel);
 
     cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
     cvShowImage("Foreground - Median", forMedian);
 
-    cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - Gaussian", forGauss);
+//    cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
+//    cvShowImage("Foreground - Gaussian", forGauss);
 
     cvWaitKey(0);
 
     cvReleaseImage(&frame);
     cvReleaseImage(&forMedian);
-    cvReleaseImage(&forGauss);
+//    cvReleaseImage(&forGauss);
 
 
     ////////////////////////////////////////////////////////
