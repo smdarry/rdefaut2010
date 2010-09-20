@@ -91,6 +91,8 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
     IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
     IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+
+    // Image binaire resultante
     IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
 
     // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
@@ -156,13 +158,13 @@ void computePixelStatistics(char* dir)
         cvReleaseImage(&frame);
     }
 
-    writeHistogram(&h1, "output/hist_10x10.mat");
-    writeHistogram(&h2, "output/hist_596x265.mat");
-    writeHistogram(&h3, "output/hist_217x137.mat");
+    writeHistogram(&h1, "output/hist_10x10.csv");
+    writeHistogram(&h2, "output/hist_596x265.csv");
+    writeHistogram(&h3, "output/hist_217x137.csv");
 
-    writeChronogram(chrono1, "output/chrono_10x10.mat");
-    writeChronogram(chrono2, "output/chrono_596x265.mat");
-    writeChronogram(chrono3, "output/chrono_217x137.mat");
+    writeChronogram(chrono1, "output/chrono_10x10.csv");
+    writeChronogram(chrono2, "output/chrono_596x265.csv");
+    writeChronogram(chrono3, "output/chrono_217x137.csv");
 
     cvReleaseMat(&chrono1);
     cvReleaseMat(&chrono2);
