@@ -98,6 +98,12 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     cvCvtScale(frame, frameF, 1, 0);
     cvAbsDiff(frameF, gm->mean, diff);
 
+    cvThreshold(diff, diff, 3.0, 255, CV_THRESH_BINARY);
+    cvScale(diff, foregrd, 1, 0);
+
+/*
+    printFrame(diff, 0, "diff.csv");
+
     cvScale(gm->stdDev, threshold, k, 0.0);
     cvSub(diff, threshold, foregrdF, NULL);
     cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
@@ -108,6 +114,7 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     cvReleaseImage(&threshold);
     cvReleaseImage(&foregrdF);
 
+*/
     return foregrd;
 }
 
@@ -167,8 +174,8 @@ int main( int argc, char** argv )
     ////////////////////////////////////////
     // Question 1: problematique de la segmentation
 
-    // Tracage des histogrammes temporels pour 3 pixels
-    computePixelStatistics("../View_008");
+    // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
+    //computePixelStatistics("../View_008");
 
 
     ////////////////////////////////////////
@@ -189,7 +196,7 @@ int main( int argc, char** argv )
     /////////////////////////////////////////////////////////
     // Question 3: etude du modele de decision (segmentation)
     
-    const char* toSegment = "../View_008/frame_0189.jpg";
+    const char* toSegment = "../View_008/frame_0061.jpg";
     IplImage* frame = cvLoadImage(toSegment, CV_LOAD_IMAGE_COLOR);
     if(frame == NULL)
     {
