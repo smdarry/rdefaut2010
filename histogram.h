@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define GRAY_LEVELS 256
-#define GET_PTR_AT(img, row, col) img->imageData+row*3+col
+#define GET_PTR_AT(img, x, y) img->imageData+img->widthStep*y+x*3
 
 typedef struct _histogram
 {
@@ -48,7 +48,7 @@ void writeHistogram(Histogram* h, char* filename)
     {
         for(i = 0; i < GRAY_LEVELS-1; i++)
         {
-            fprintf(fp, "%d ", (int)h->freq[channel][i]);
+            fprintf(fp, "%d,", (int)h->freq[channel][i]);
         }
         fprintf(fp, "%d\n", (int)h->freq[channel][GRAY_LEVELS-1]);
     }
@@ -87,7 +87,7 @@ void writeChronogram(CvMat* c, char* filename)
         for(t = 0; t < c->cols-1; t++)
         {
             ptr = (uchar*)(c->data.ptr + t*3);
-            fprintf(fp, "%d ", *(ptr+channel));
+            fprintf(fp, "%d,", *(ptr+channel));
         }
         fprintf(fp, "%d\n", *(ptr+(c->cols-1)+channel));
     }
