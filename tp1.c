@@ -50,7 +50,7 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
 
 IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
 {
-    // Allocation des images intermediaires
+    // Images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
     IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
@@ -86,10 +86,11 @@ IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
 
 IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
 {
-    // Allocation des images intermediaires
+    // Images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
     IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
     IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
     IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
@@ -103,15 +104,13 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     cvCvtScale(frame, frameF, 1, 0);
     cvAbsDiff(frameF, gm->mean, diff);
 
-    cvCvtScale(diff, foregrdA, 1, 0);
-    cvThreshold(foregrdA, foregrdA, 30.0, 255, CV_THRESH_BINARY);
-
-    /*
+    // Creation de l'image seuil definie en fonction de l'ecart-type
     cvScale(gm->stdDev, threshold, k, 0.0);
+
+    // Les differences au dela de l'image seuil (positives) sont l'avant-plan
     cvSub(diff, threshold, foregrdF, NULL);
     cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
-    cvScale(foregrdF, foregrd, 1, 0);
-    */
+    cvScale(foregrdF, foregrdA, 1, 0);
 
     // Combine l'information des 3 plans avec une operation OR
     cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
@@ -121,6 +120,7 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     cvReleaseImage(&frameF);
     cvReleaseImage(&diff);
     cvReleaseImage(&threshold);
+    cvReleaseImage(&foregrdF);
     cvReleaseImage(&foregrdA);
     cvReleaseImage(&foregrdB);
     cvReleaseImage(&foregrdG);
@@ -129,7 +129,7 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     return foregrd;
 }
 
-void computePixelStatistics(char* dir)
+void computePixelStatistics(char* dir, int imageCount)
 {
     // Histogrammes temporels pour 3 pixels
     Histogram h1, h2, h3;
@@ -138,24 +138,24 @@ void computePixelStatistics(char* dir)
     initHistogram(&h3);
 
     // Chronogrammes pour 3 pixels
-    CvMat *chrono1 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
-    CvMat *chrono2 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
-    CvMat *chrono3 = cvCreateMat(1, IMAGE_COUNT, CV_8UC3);
+    CvMat *chrono1 = cvCreateMat(1, imageCount, CV_8UC3);
+    CvMat *chrono2 = cvCreateMat(1, imageCount, CV_8UC3);
+    CvMat *chrono3 = cvCreateMat(1, imageCount, CV_8UC3);
 
     char filename[256];
     IplImage* frame = NULL;
+
     int i;
-    for(i = 0; i < IMAGE_COUNT; i++)
+    for(i = 0; i < imageCount; i++)
     {
         sprintf(filename, "%s/frame_%04d.jpg", dir, i);
 
         frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
         if(frame == NULL)
         {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
             continue;
         }
-        else
-            printf("Image %s\n lue", filename);
 
         updateHistogram(&h1, frame, 10, 10);
         updateHistogram(&h2, frame, 596, 265);
@@ -187,7 +187,8 @@ int main( int argc, char** argv )
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
-    //computePixelStatistics("../View_008");
+    //computePixelStatistics("../View_008", IMAGE_COUNT);
+    //computePixelStatistics("../View_008", 5);
 
 
     ////////////////////////////////////////
@@ -217,7 +218,7 @@ int main( int argc, char** argv )
     }
 
     IplImage* forMedian = segmentMedian(frame, 30.0, &medianModel);
-    IplImage* forGauss = segmentGaussian(frame, 1.0, &gaussianModel);
+    IplImage* forGauss = segmentGaussian(frame, 3.0, &gaussianModel);
 
     cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
     cvShowImage("Foreground - Median", forMedian);
