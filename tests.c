@@ -68,28 +68,31 @@ void testComputeMeanSdv()
 
 void testCvThreshold()
 {
-    IplImage* image = cvCreateImage(cvSize(2, 5), IPL_DEPTH_32F, 3);
+    IplImage* image = cvCreateImage(cvSize(720, 576), IPL_DEPTH_32F, 3);
     cvZero(image);
 
     int step = image->widthStep;
 
     int row, col;
-    for(row = 0; row < 2; row++)
+    for(row = 0; row < 576; row++)
     {
-        for(col = 0; col < 5; col++)
+        for(col = 0; col < 720; col++)
         {
             ((float*)(image->imageData + step*row))[col*3] = 10.0;
+            ((float*)(image->imageData + step*row))[col*3+1] = 11.0;
+            ((float*)(image->imageData + step*row))[col*3+2] = 12.0;
         }
     }
 
-    for(row = 0; row < 2; row++)
+    for(row = 0; row < 576; row++)
     {
-        for(col = 0; col < 5; col++)
+        for(col = 0; col < 720; col++)
         {
-            float p = ((float*)(image->imageData + step*row))[col*3];
+            float p = ((float*)(image->imageData + step*row))[col*3+1];
             printf("[%d,%d] : %.2f\n", col, row, p);
         }
     }
+    cvReleaseImage(&image);
 }
 
 int main( int argc, char** argv )
