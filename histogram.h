@@ -22,16 +22,17 @@ void initHistogram(Histogram* h)
 
 void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
 {
-    // Pointer on pixel of first channel (blue)
-    uchar* ptr;
+    int step = frame->widthStep;
 
-    // Extract pixel at location [x, y]
-    ptr = GET_PTR_AT(frame, x, y);
+    // Obtient pointeur sur le pixel a [x, y]
+    uchar blue = ((uchar*)(frame->imageData + step*y))[x*3];
+    uchar green = ((uchar*)(frame->imageData + step*y))[x*3+1];
+    uchar red = ((uchar*)(frame->imageData + step*y))[x*3+2];
 
     // Update each histogram for that pixel
-    h->freq[0][*ptr]++;     // Blue
-    h->freq[1][*(ptr+1)]++; // Green
-    h->freq[2][*(ptr+2)]++; // Red
+    h->freq[0][blue]++;
+    h->freq[1][green]++;
+    h->freq[2][red]++;
 }
 
 void writeHistogram(Histogram* h, char* filename)
@@ -57,18 +58,20 @@ void writeHistogram(Histogram* h, char* filename)
 
 void updateChronogram(CvMat* c, IplImage* frame, int t, int x, int y)
 {
-    uchar *pixel, *ptrDst;
+    int step = frame->widthStep;
 
     // Obtient pointeur sur le pixel a [x, y]
-    pixel = GET_PTR_AT(frame, x, y);
+    uchar blue = ((uchar*)(frame->imageData + step*y))[x*3];
+    uchar green = ((uchar*)(frame->imageData + step*y))[x*3+1];
+    uchar red = ((uchar*)(frame->imageData + step*y))[x*3+2];
 
     // Obtient un pointeur sur la destination au temps 't'
-    ptrDst = (uchar*)(c->data.ptr + t*3);
+    uchar* ptrDst = (uchar*)(c->data.ptr + t*3);
 
     // Mise a jour de chaque plan au temps 't'
-    *ptrDst = *pixel;           // Blue
-    *(ptrDst+1) = *(pixel+1);   // Green
-    *(ptrDst+2) = *(pixel+2);   // Red
+    *ptrDst = blue;
+    *(ptrDst+1) = green;
+    *(ptrDst+2) = red;
 }
 
 void writeChronogram(CvMat* c, char* filename)
