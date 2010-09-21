@@ -132,3 +132,66 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
         }
     }
 }
+
+void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int imageCount, int interval)
+{
+    CvSize fSize = cvSize(0, 0);
+
+    IplImage* f = NULL, *mean = model->mean;
+    int stepm = mean->widthStep;
+
+    char filename[256];
+    char blue, green, red;
+    float meanBlue, meanGreen, meanRed;
+
+    int i;
+    for(i = 0; i < imageCount; i += interval)
+    {
+        sprintf(filename, "%s/frame_%04d.jpg", dir, i);
+
+        f = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(f == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+
+        // Initialisation du modele Gaussien avec la premiere frame
+        if(fSize.width == 0 && fSize.height == 0)
+        {
+            fSize = cvGetSize(f);
+            initGaussianModel(model, fSize);
+            cvCvtScale(f, model->mean, 1.0, 0);
+        }
+
+        // Mise a jour du modele Gaussien pixel par pixel
+        int row, col, iStep;
+        for(row = 0; row < fSize.width; row++)
+        {
+            for(col = 0; col < fSize.height; col++)
+            {
+                iStep = f->widthStep;
+
+                // Valeurs courantes de moyennes
+                meanBlue = ((float*)(mean->imageData + stepm*row))[col*3];
+                meanGreen = ((float*)(mean->imageData + stepm*row))[col*3+1];
+                meanRed = ((float*)(mean->imageData + stepm*row))[col*3+2];
+
+                // Nouvelles valeurs de pixels
+                blue = ((uchar*)(f->imageData + iStep*row))[col*3];
+                green = ((uchar*)(f->imageData + iStep*row))[col*3+1];
+                red = ((uchar*)(f->imageData + iStep*row))[col*3+2];
+                
+                // Mise a jour des valeurs moyennes
+                meanBlue = alpha * blue + (1 - alpha) * meanBlue;
+                meanGreen = alpha * green + (1 - alpha) * meanGreen;
+                meanRed = alpha * red + (1 - alpha) * meanRed;
+            
+                // Positionne les nouvelles valeurs de moyenne dans le modele
+                ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue; 
+                ((float*)(mean->imageData + stepm*row))[col*3 + 1] = meanGreen; 
+                ((float*)(mean->imageData + stepm*row))[col*3 + 2] = meanRed; 
+            }
+        }
+    }
+}
