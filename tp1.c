@@ -129,6 +129,30 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     return foregrd;
 }
 
+void opening(IplImage* src, IplImage* dst, int maskSize)
+{
+    // Cree un masque de la taille specifiee
+    IplConvKernel* mask = cvCreateStructuringElementEx(maskSize, maskSize, 0, 0, CV_SHAPE_RECT, NULL);
+    
+    // Une ouverture est une erosion suivie d'une dilatation
+    cvErode(src, dst, NULL, 1);
+    cvDilate(dst, dst, NULL, 1);
+
+    cvReleaseStructuringElement(&mask);
+}
+
+void closing(IplImage* src, IplImage* dst, int maskSize)
+{
+    // Cree un masque de la taille specifiee
+    IplConvKernel* mask = cvCreateStructuringElementEx(maskSize, maskSize, 0, 0, CV_SHAPE_RECT, NULL);
+
+    // Une fermeture est une dilation suivie d'une erosion 
+    cvDilate(src, dst, NULL, 1);
+    cvErode(dst, dst, NULL, 1);
+
+    cvReleaseStructuringElement(&mask);
+}
+
 void computePixelStatistics(char* dir, int imageCount)
 {
     // Histogrammes temporels pour 3 pixels
@@ -205,6 +229,7 @@ int main( int argc, char** argv )
     // Construction des modeles
     learnMedianModel(&medianModel, frameBuffer, FRAME_BUF_SIZE);
     learnGaussianModel(&gaussianModel, frameBuffer, FRAME_BUF_SIZE);
+    learnAdaptiveGaussian(&gaussianModel, "../View_008", FRAME_BUF_SIZE, 0.5, 1);
 
 
     /////////////////////////////////////////////////////////
@@ -220,17 +245,13 @@ int main( int argc, char** argv )
     IplImage* forMedian = segmentMedian(frame, 30.0, &medianModel);
     IplImage* forGauss = segmentGaussian(frame, 3.0, &gaussianModel);
 
-    cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - Median", forMedian);
+    //cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
+    //cvShowImage("Foreground - Median", forMedian);
 
-    cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - Gaussian", forGauss);
+    //cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
+    //cvShowImage("Foreground - Gaussian", forGauss);
 
-    cvWaitKey(0);
-
-    cvReleaseImage(&frame);
-    cvReleaseImage(&forMedian);
-    cvReleaseImage(&forGauss);
+    //cvWaitKey(0);
 
 
     ////////////////////////////////////////////////////////
@@ -238,4 +259,23 @@ int main( int argc, char** argv )
 
     releaseMedianModel(&medianModel);
     releaseGaussianModel(&gaussianModel);
+
+
+    // Question 5: nettoyage du resultat de la segmentation
+    
+    // a) une ouverture seule
+    //opening(forMedian, forMedian, 3);
+    
+    // b) une ouverture puis une fermeture
+    opening(forMedian, forMedian, 3);
+    closing(forMedian, forMedian, 3);
+
+    cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
+    cvShowImage("Foreground - Median", forMedian);
+    
+    cvWaitKey(0);
+
+    cvReleaseImage(&frame);
+    cvReleaseImage(&forMedian);
+    cvReleaseImage(&forGauss);
 }
