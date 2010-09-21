@@ -92,7 +92,8 @@ void writeChronogram(CvMat* c, char* filename)
             ptr = (uchar*)(c->data.ptr + t*3);
             fprintf(fp, "%d,", *(ptr+channel));
         }
-        fprintf(fp, "%d\n", *(ptr+(c->cols-1)+channel));
+        ptr = (uchar*)(c->data.ptr + t*3);
+        fprintf(fp, "%d\n", *(ptr+channel));
     }
     fclose(fp);
 }
