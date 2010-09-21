@@ -2,23 +2,19 @@
 #define _UTILS_H_
 
 #include "cv.h"
-
 #include <stdio.h>
-
-#define GET_PTR_AT(img, x, y) img->imageData+img->widthStep*y+x*3
 
 void printFrame(IplImage* frame, int channel, char* filename)
 {
     FILE* fp = fopen(filename, "w+");
 
-    int row, col;
+    int row, col, step = frame->widthStep;
     for(row = 0; row < frame->height; row++)
     {
         for(col = 0; col < frame->width; col++)
         {
-            float* f = (float*)(frame->imageData + frame->width*row*3 + col*3); 
-
-            fprintf(fp, "%.2f,", *(f+channel));
+            float f = ((float*)(frame->imageData + step*row))[col*3];
+            fprintf(fp, "%.2f,", f);
         }
         fprintf(fp, "\n");
     }
@@ -29,14 +25,13 @@ void printByteFrame(IplImage* frame, int channel, char* filename)
 {
     FILE* fp = fopen(filename, "w+");
 
-    int row, col;
+    int row, col, step = frame->widthStep;
     for(row = 0; row < frame->height; row++)
     {
         for(col = 0; col < frame->width; col++)
         {
-            uchar* f = (uchar*)GET_PTR_AT(frame, col, row);
-
-            fprintf(fp, "%d,", *(f+channel));
+            uchar c = ((uchar*)(frame->imageData + step*row))[col*3];
+            fprintf(fp, "%d,", c);
         }
         fprintf(fp, "\n");
     }
