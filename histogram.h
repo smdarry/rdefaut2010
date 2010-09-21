@@ -24,12 +24,12 @@ void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
 {
     int step = frame->widthStep;
 
-    // Obtient pointeur sur le pixel a [x, y]
+    // Obtient les composantes du pixel a [x, y]
     uchar blue = ((uchar*)(frame->imageData + step*y))[x*3];
     uchar green = ((uchar*)(frame->imageData + step*y))[x*3+1];
     uchar red = ((uchar*)(frame->imageData + step*y))[x*3+2];
 
-    // Mise a jour de chaque histogramme pour ce pixel
+    // Mise a jour de chaque plan pour ce pixel
     h->freq[0][blue]++;
     h->freq[1][green]++;
     h->freq[2][red]++;
