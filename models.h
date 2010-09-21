@@ -23,16 +23,16 @@ typedef struct _modeleMedian
 
 void initMedianModel(MedianModel* model, CvSize size)
 {
-     model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->median);
 }
 
 void initGaussianModel(GaussianModel* model, CvSize size)
 {
-     model->mean = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    model->mean = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->mean);
 
-     model->stdDev = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    model->stdDev = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->stdDev);
 }
 
@@ -50,55 +50,29 @@ void releaseGaussianModel(GaussianModel* model)
         cvReleaseImage(&model->stdDev);
 }
 
+void printArray(uchar a[], int count)
+{
+    FILE* fp = fopen("array.csv", "w+");
+    int i;
+    for(i = 0; i < count-1; i++)
+    {
+        fprintf(fp, "%d,", a[i]);
+    }
+    fprintf(fp, "%d", a[count-1]);
+
+    fclose(fp);
+}
+
 void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
 
     initMedianModel(model, fSize);
+    IplImage *f, *median = model->median;
 
-    uchar* pixel;
     char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float medianBlue, medianGreen, medianRed;
-    float* data = (float*)model->median->imageData;
-    int row, col, i, step = model->median->widthStep;
-    for(row = 0; row < fSize.height; row++)
-    {
-        for(col = 0; col < fSize.width; col++)
-        {
-            for(i = 0; i < frameCount; i++)
-            {
-                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], col, row);
-
-                pixelsBlue[i] = *pixel;
-                pixelsGreen[i] = *(pixel+1);
-                pixelsRed[i] = *(pixel+2);
-            }
-
-            // Calcul des mediannes
-            medianBlue = computeMedian(pixelsBlue, frameCount);
-            medianGreen = computeMedian(pixelsGreen, frameCount);
-            medianRed = computeMedian(pixelsRed, frameCount);
-
-            // Positionne les valeurs mediannes dans le modele
-            ((float*)(data + step*row))[col*3] = medianBlue; 
-            ((float*)(data + step*row))[col*3 + 1] = medianGreen; 
-            ((float*)(data + step*row))[col*3 + 2] = medianRed; 
-        }
-    }
-}
-
-void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
-{
-    CvSize fSize = cvGetSize(frameBuffer[0]);
-
-    initGaussianModel(model, fSize);
-
-    uchar* pixel;
-    uchar pixelsBlue[frameCount], pixelsGreen[frameCount], 
-          pixelsRed[frameCount];
-    float meanBlue, meanGreen, meanRed;
-    float sdvBlue, sdvGreen, sdvRed;
-    float* ptr;
+    int step = median->widthStep, iStep;
     int row, col, i;
     for(row = 0; row < fSize.height; row++)
     {
@@ -106,11 +80,54 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
         {
             for(i = 0; i < frameCount; i++)
             {
-                pixel = (uchar*)GET_PTR_AT(frameBuffer[i], col, row);
+                f = frameBuffer[i];
+                iStep = f->widthStep;
 
-                pixelsBlue[i] = *pixel;
-                pixelsGreen[i] = *(pixel+1);
-                pixelsRed[i] = *(pixel+2);
+                pixelsBlue[i] = ((uchar*)(f->imageData + iStep*row))[col*3];
+                pixelsGreen[i] = ((uchar*)(f->imageData + iStep*row))[col*3+1];
+                pixelsRed[i] = ((uchar*)(f->imageData + iStep*row))[col*3+2];
+            }
+
+            // Calcul des mediannes
+            medianBlue = 10; //computeMedian(pixelsBlue, frameCount);
+            medianGreen = 20; //computeMedian(pixelsGreen, frameCount);
+            medianRed = 30; //computeMedian(pixelsRed, frameCount);
+
+            // Positionne les valeurs mediannes dans le modele
+            ((float*)(median->imageData + step*row))[col*3] = medianBlue; 
+            ((float*)(median->imageData + step*row))[col*3 + 1] = medianGreen; 
+            ((float*)(median->imageData + step*row))[col*3 + 2] = medianRed; 
+        }
+    }
+    printArray(pixelsBlue, frameCount);
+    printFrame(median, 1, "medianImage.csv");
+}
+
+void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
+{
+    CvSize fSize = cvGetSize(frameBuffer[0]);
+
+    initGaussianModel(model, fSize);
+    IplImage* f, *mean = model->mean, *sd = model->stdDev;
+
+    uchar pixelsBlue[frameCount], pixelsGreen[frameCount], 
+          pixelsRed[frameCount];
+    float meanBlue, meanGreen, meanRed;
+    float sdvBlue, sdvGreen, sdvRed;
+    int stepm = mean->widthStep, steps = sd->widthStep, iStep;
+    int row, col, i;
+    for(row = 0; row < fSize.height; row++)
+    {
+        for(col = 0; col < fSize.width; col++)
+        {
+            for(i = 0; i < frameCount; i++)
+            {
+                f = frameBuffer[i];
+                iStep = f->widthStep;
+
+                pixelsBlue[i] = ((uchar*)(f->imageData + iStep*row))[col*3];
+                pixelsGreen[i] = ((uchar*)(f->imageData + iStep*row))[col*3+1];
+                pixelsRed[i] = ((uchar*)(f->imageData + iStep*row))[col*3+2];
             }
             
             // Calcul des parametres gaussiens
@@ -119,18 +136,14 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
             computeMeanSdv(pixelsRed, frameCount, &meanRed, &sdvRed);
 
             // Positionne les valeurs de moyenne dans le modele
-            float* ptr = (float*)(model->mean->imageData + fSize.width*row*3 + col*3); 
-
-            *ptr = meanBlue;
-            *(ptr+1) = meanGreen;
-            *(ptr+2) = meanRed;
+            ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue; 
+            ((float*)(mean->imageData + stepm*row))[col*3 + 1] = meanGreen; 
+            ((float*)(mean->imageData + stepm*row))[col*3 + 2] = meanRed; 
 
             // Positionne les valeurs d'ecart-type dans le modele
-            ptr = (float*)(model->stdDev->imageData + fSize.width*row*3 + col*3); 
-
-            *ptr = sdvBlue;
-            *(ptr+1) = sdvGreen;
-            *(ptr+2) = sdvRed;
+            ((float*)(sd->imageData + steps*row))[col*3] = sdvBlue; 
+            ((float*)(sd->imageData + steps*row))[col*3 + 1] = sdvGreen; 
+            ((float*)(sd->imageData + steps*row))[col*3 + 2] = sdvRed; 
         }
     }
 }
