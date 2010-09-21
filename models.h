@@ -99,8 +99,6 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             ((float*)(median->imageData + step*row))[col*3 + 2] = medianRed; 
         }
     }
-    printArray(pixelsBlue, frameCount);
-    printFrame(median, 1, "medianImage.csv");
 }
 
 void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
