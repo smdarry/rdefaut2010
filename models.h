@@ -50,19 +50,6 @@ void releaseGaussianModel(GaussianModel* model)
         cvReleaseImage(&model->stdDev);
 }
 
-void printArray(uchar a[], int count)
-{
-    FILE* fp = fopen("array.csv", "w+");
-    int i;
-    for(i = 0; i < count-1; i++)
-    {
-        fprintf(fp, "%d,", a[i]);
-    }
-    fprintf(fp, "%d", a[count-1]);
-
-    fclose(fp);
-}
-
 void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
