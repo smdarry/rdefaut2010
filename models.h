@@ -89,9 +89,9 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             }
 
             // Calcul des mediannes
-            medianBlue = 10; //computeMedian(pixelsBlue, frameCount);
-            medianGreen = 20; //computeMedian(pixelsGreen, frameCount);
-            medianRed = 30; //computeMedian(pixelsRed, frameCount);
+            medianBlue = computeMedian(pixelsBlue, frameCount);
+            medianGreen = computeMedian(pixelsGreen, frameCount);
+            medianRed = computeMedian(pixelsRed, frameCount);
 
             // Positionne les valeurs mediannes dans le modele
             ((float*)(median->imageData + step*row))[col*3] = medianBlue; 
