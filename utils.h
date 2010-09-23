@@ -84,12 +84,12 @@ void printPatchF(IplImage* frame, int channel, char* filename, int beginX, int b
 
 void analysePixel(IplImage* frame, IplImage* mean, IplImage* sdv, int x, int y)
 {
-    float p[3], m[3], s[3], d[3];
+    float p[3], m[3], s[3], d[3], r[3];
 
     int ustep = frame->widthStep;
     int fstep = mean->widthStep;
 
-    printf("** Analysis result for pixel [%d,%d] **\n", x, y);
+    printf("\n** Analysis result for pixel [%d,%d] **\n", x, y);
 
     int channel;
     for(channel = 0; channel < 3; channel++)
@@ -98,12 +98,14 @@ void analysePixel(IplImage* frame, IplImage* mean, IplImage* sdv, int x, int y)
         m[channel] = ((float*)(mean->imageData + fstep*y))[x*3+channel];
         s[channel] = ((float*)(sdv->imageData + fstep*y))[x*3+channel];
         d[channel] = fabs(p[channel] - m[channel]);
+        r[channel] = fabs(d[channel] / s[channel]);
     }
 
     printf("Intensity: (%.2f, %.2f, %.2f)\n", p[0], p[1], p[2]);
     printf("Mean: (%.2f, %.2f, %.2f)\n", m[0], m[1], m[2]);
     printf("Standard dev.: (%.2f, %.2f, %.2f)\n", s[0], s[1], s[2]);
     printf("Diff.: (%.2f, %.2f, %.2f)\n", d[0], d[1], d[2]);
+    printf("Diff/Std.: (%.2f, %.2f, %.2f)\n", r[0], r[1], r[2]);
 }
 
 #endif
