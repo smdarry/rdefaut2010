@@ -84,6 +84,59 @@ IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
     return foregrd;
 }
 
+IplImage* segmentStdDev(IplImage* frame, float k, GaussianModel* gm)
+{
+    // Images intermediaires
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    cvThreshold(gm->stdDev, foregrdF, k, 255, CV_THRESH_BINARY);
+    cvCvtScale(foregrdF, foregrdA, 1, 0);
+    
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    return foregrd;
+}
+
+IplImage* segmentMean(IplImage* frame, float threshold, GaussianModel* gm)
+{
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
+    // sur chaque plan
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, gm->mean, diff);
+
+    cvCvtScale(diff, foregrdA, 1, 0);
+    cvThreshold(foregrdA, foregrdA, threshold, 255, CV_THRESH_BINARY);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    return foregrd;
+}
+
 IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
 {
     // Images intermediaires
@@ -243,7 +296,10 @@ int main( int argc, char** argv )
     }
 
     IplImage* forMedian = segmentMedian(frame, 30.0, &medianModel);
-    IplImage* forGauss = segmentGaussian(frame, 3.0, &gaussianModel);
+    IplImage* forGauss = segmentGaussian(frame, 9.0, &gaussianModel);
+
+    IplImage* forMean = segmentMean(frame, 40.0, &gaussianModel);
+    IplImage* forStdDev = segmentStdDev(frame, 9.0, &gaussianModel);
 
     //cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
     //cvShowImage("Foreground - Median", forMedian);
@@ -251,7 +307,18 @@ int main( int argc, char** argv )
     //cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
     //cvShowImage("Foreground - Gaussian", forGauss);
 
-    //cvWaitKey(0);
+    cvNamedWindow("Foreground - Mean", CV_WINDOW_AUTOSIZE);
+    cvShowImage("Foreground - Mean", forMean);
+
+    cvNamedWindow("Foreground - StdDev", CV_WINDOW_AUTOSIZE);
+    cvShowImage("Foreground - StdDev", forStdDev);
+    
+    cvSaveImage("Median.jpg", forMedian);
+    cvSaveImage("Gaussian.jpg", forGauss);
+    cvSaveImage("Mean.jpg", forMean);
+    cvSaveImage("StdDev.jpg", forStdDev);
+
+    cvWaitKey(0);
 
 
     ////////////////////////////////////////////////////////
