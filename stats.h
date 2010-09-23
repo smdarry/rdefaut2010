@@ -21,6 +21,15 @@ float computeMedian(uchar pixelArray[], int size)
     return median;
 }
 
+char computePercentile(uchar pixels[], int size, float percentile)
+{
+    int index = (int)(size * percentile);
+    
+    qsort(pixels, size, sizeof(uchar), cmpPixel);
+    
+    return pixels[index];
+}
+
 void computeMeanSdv(uchar pixelArray[], int size, float* mean, float* sdv)
 {
     *mean = 0.0, *sdv = 0.0;
