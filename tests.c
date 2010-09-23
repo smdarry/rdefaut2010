@@ -41,6 +41,21 @@ void testComputeMedian()
     printf("Expected: 0.5, Actual: %.1f\n", median);
 }
 
+void testComputePercentile()
+{
+    ////////////////////
+    // Test 1
+    //
+    char testData1[3][9] = { {6,1,4,3,2,4,1,6,9},
+                        {13,9,11,11,10,11,12,10,11},
+                        {1,0,0,1,2,1,1,2,0} };
+
+    printf("\nTEST PERCENTILE\n");
+
+    char percentile = computePercentile(testData1[0], 9, 0.95);
+    printf("Expected: 9, Actual: %d\n", percentile);
+}
+
 void testComputeMeanSdv()
 {
     /////////////////////
@@ -98,8 +113,10 @@ void testCvThreshold()
 int main( int argc, char** argv )
 {
     testComputeMedian();
+
+    testComputePercentile();
     
     testComputeMeanSdv();
 
-    testCvThreshold();
+    //testCvThreshold();
 }
