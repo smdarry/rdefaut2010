@@ -19,7 +19,7 @@ void printFrame(IplImage* frame, int channel, char* filename)
     {
         for(col = 0; col < frame->width; col++)
         {
-            float f = ((float*)(frame->imageData + step*row))[col*3];
+            float f = ((float*)(frame->imageData + step*row))[col*3+channel];
             fprintf(fp, "%.2f,", f);
         }
         fprintf(fp, "\n");
@@ -36,7 +36,7 @@ void printByteFrame(IplImage* frame, int channel, char* filename)
     {
         for(col = 0; col < frame->width; col++)
         {
-            uchar c = ((uchar*)(frame->imageData + step*row))[col*3];
+            uchar c = ((uchar*)(frame->imageData + step*row))[col*3+channel];
             fprintf(fp, "%d,", c);
         }
         fprintf(fp, "\n");
@@ -80,6 +80,30 @@ void printPatchF(IplImage* frame, int channel, char* filename, int beginX, int b
         fprintf(fp, "\n");
     }
     fclose(fp);
+}
+
+void analysePixel(IplImage* frame, IplImage* mean, IplImage* sdv, int x, int y)
+{
+    float p[3], m[3], s[3], d[3];
+
+    int ustep = frame->widthStep;
+    int fstep = mean->widthStep;
+
+    printf("** Analysis result for pixel [%d,%d] **\n", x, y);
+
+    int channel;
+    for(channel = 0; channel < 3; channel++)
+    {
+        p[channel] = (float)((uchar*)(frame->imageData + ustep*y))[x*3+channel];
+        m[channel] = ((float*)(mean->imageData + fstep*y))[x*3+channel];
+        s[channel] = ((float*)(sdv->imageData + fstep*y))[x*3+channel];
+        d[channel] = fabs(p[channel] - m[channel]);
+    }
+
+    printf("Intensity: (%.2f, %.2f, %.2f)\n", p[0], p[1], p[2]);
+    printf("Mean: (%.2f, %.2f, %.2f)\n", m[0], m[1], m[2]);
+    printf("Standard dev.: (%.2f, %.2f, %.2f)\n", s[0], s[1], s[2]);
+    printf("Diff.: (%.2f, %.2f, %.2f)\n", d[0], d[1], d[2]);
 }
 
 #endif
