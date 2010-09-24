@@ -86,6 +86,10 @@ IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
 
 IplImage* segmentStdDev(IplImage* frame, float k, GaussianModel* gm)
 {
+    printFrame(gm->stdDev, 0, "stdBlue.csv");
+    printFrame(gm->stdDev, 1, "stdGreen.csv");
+    printFrame(gm->stdDev, 2, "stdRed.csv");
+
     // Images intermediaires
     IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
@@ -109,6 +113,10 @@ IplImage* segmentStdDev(IplImage* frame, float k, GaussianModel* gm)
 
 IplImage* segmentMean(IplImage* frame, float threshold, GaussianModel* gm)
 {
+    printFrame(gm->mean, 0, "meanBlue.csv");
+    printFrame(gm->mean, 1, "meanGreen.csv");
+    printFrame(gm->mean, 2, "meanRed.csv");
+
     // Images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
     IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
@@ -139,46 +147,15 @@ IplImage* segmentMean(IplImage* frame, float threshold, GaussianModel* gm)
 
 IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
 {
-    // Images intermediaires
-    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
-    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
-    IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
-    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
-    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
-    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
-    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
-    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* meanImage = segmentMean(frame, 40.0, gm);
+    IplImage* stdImage = segmentStdDev(frame, 9.0, gm);
 
     // Image binaire resultante
     IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
 
-    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
-    // sur chaque plan
-    cvCvtScale(frame, frameF, 1, 0);
-    cvAbsDiff(frameF, gm->mean, diff);
-
-    // Creation de l'image seuil definie en fonction de l'ecart-type
-    cvScale(gm->stdDev, threshold, k, 0.0);
-
-    // Les differences au dela de l'image seuil (positives) sont l'avant-plan
-    cvSub(diff, threshold, foregrdF, NULL);
-    cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
-    cvScale(foregrdF, foregrdA, 1, 0);
-
-    // Combine l'information des 3 plans avec une operation OR
-    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
-    cvOr(foregrdB, foregrdG, foregrd, NULL);
-    cvOr(foregrd, foregrdR, foregrd, NULL);
-
-    cvReleaseImage(&frameF);
-    cvReleaseImage(&diff);
-    cvReleaseImage(&threshold);
-    cvReleaseImage(&foregrdF);
-    cvReleaseImage(&foregrdA);
-    cvReleaseImage(&foregrdB);
-    cvReleaseImage(&foregrdG);
-    cvReleaseImage(&foregrdR);
-
+    // Combine l'information des deux images par une operation AND
+    cvAnd(meanImage, stdImage, foregrd, NULL);
+    
     return foregrd;
 }
 
@@ -219,6 +196,10 @@ void computePixelStatistics(char* dir, int imageCount)
     CvMat *chrono2 = cvCreateMat(1, imageCount, CV_8UC3);
     CvMat *chrono3 = cvCreateMat(1, imageCount, CV_8UC3);
 
+    CvMat *chrono4 = cvCreateMat(1, imageCount, CV_8UC3);
+    CvMat *chrono5 = cvCreateMat(1, imageCount, CV_8UC3);
+    CvMat *chrono6 = cvCreateMat(1, imageCount, CV_8UC3);
+
     char filename[256];
     IplImage* frame = NULL;
 
@@ -242,6 +223,10 @@ void computePixelStatistics(char* dir, int imageCount)
         updateChronogram(chrono2, frame, i, 596, 265);
         updateChronogram(chrono3, frame, i, 217, 137);
 
+        updateChronogram(chrono4, frame, i, 109, 167);
+        //updateChronogram(chrono5, frame, i, 596, 265);
+        //updateChronogram(chrono6, frame, i, 217, 137);
+
         cvReleaseImage(&frame);
     }
 
@@ -253,9 +238,17 @@ void computePixelStatistics(char* dir, int imageCount)
     writeChronogram(chrono2, "output/chrono_596x265.csv");
     writeChronogram(chrono3, "output/chrono_217x137.csv");
 
+    writeChronogram(chrono4, "output/chrono_109x167.csv");
+    //writeChronogram(chrono5, "output/chrono_596x265.csv");
+    //writeChronogram(chrono6, "output/chrono_109x167.csv");
+
     cvReleaseMat(&chrono1);
     cvReleaseMat(&chrono2);
     cvReleaseMat(&chrono3);
+
+    cvReleaseMat(&chrono4);
+    cvReleaseMat(&chrono5);
+    cvReleaseMat(&chrono6);
 }
 
 int main( int argc, char** argv )
@@ -264,25 +257,25 @@ int main( int argc, char** argv )
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
-    //computePixelStatistics("../View_008", IMAGE_COUNT);
-    //computePixelStatistics("../View_008", 5);
+    computePixelStatistics("../View_008", IMAGE_COUNT);
+    //computePixelStatistics("../View_008", 70);
 
-
+/*
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
     MedianModel medianModel;
     GaussianModel gaussianModel;
 
-    IplImage* frameBuffer[FRAME_BUF_SIZE];
+    IplImage* frameBuffer[IMAGE_COUNT];
 
     // Prend un echantillon d'images
-    selectFrames("../View_008", frameBuffer, FRAME_BUF_SIZE, FRAME_SAMPLING);
+    selectFrames("../View_008", frameBuffer, IMAGE_COUNT, 1);
 
     // Construction des modeles
-    learnMedianModel(&medianModel, frameBuffer, FRAME_BUF_SIZE);
-    learnGaussianModel(&gaussianModel, frameBuffer, FRAME_BUF_SIZE);
-    learnAdaptiveGaussian(&gaussianModel, "../View_008", FRAME_BUF_SIZE, 0.5, 1);
+    //learnMedianModel(&medianModel, frameBuffer, IMAGE_COUNT);
+    learnGaussianModel(&gaussianModel, frameBuffer, IMAGE_COUNT);
+    //learnAdaptiveGaussian(&gaussianModel, "../View_008", IMAGE_COUNT, 0.5, 1);
 
 
     /////////////////////////////////////////////////////////
@@ -298,7 +291,7 @@ int main( int argc, char** argv )
     IplImage* forMedian = segmentMedian(frame, 30.0, &medianModel);
     IplImage* forGauss = segmentGaussian(frame, 9.0, &gaussianModel);
 
-    IplImage* forMean = segmentMean(frame, 40.0, &gaussianModel);
+    IplImage* forMean = segmentMean(frame, 50.0, &gaussianModel);
     IplImage* forStdDev = segmentStdDev(frame, 9.0, &gaussianModel);
 
     //cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
@@ -313,12 +306,50 @@ int main( int argc, char** argv )
     cvNamedWindow("Foreground - StdDev", CV_WINDOW_AUTOSIZE);
     cvShowImage("Foreground - StdDev", forStdDev);
     
+    cvWaitKey(0);
+    
     cvSaveImage("Median.jpg", forMedian);
     cvSaveImage("Gaussian.jpg", forGauss);
     cvSaveImage("Mean.jpg", forMean);
     cvSaveImage("StdDev.jpg", forStdDev);
 
-    cvWaitKey(0);
+    // Pixels d'arriere-plan
+    
+    printf("\n==> Pixels d'arriere-plan\n");
+
+    // Brique et feuillage dans le coin superieur gauche
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 10, 10);
+
+    // Ciment a droite des jambes de la 5e personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 596, 265);
+
+    // Ciment a droite des jambes de la 2e personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 325, 225);
+
+    // Ciment a gauche du corps de la 1ere personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 150, 180);
+
+    // Brique au dessus de la 3e personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 360, 77);
+
+    // Bruit dans l'image moyenne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 109, 167);
+
+
+    // Pixels d'avant-plan
+    
+    printf("\n==> Pixels d'avant-plan\n");
+
+    // Manteau de la 1ere personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 217, 137);
+
+    // Manteau de la 2e personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 312, 151);
+
+    // Manteau de la 5e personne
+    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 557, 170);
+
+    //cvWaitKey(0);
 
 
     ////////////////////////////////////////////////////////
@@ -326,8 +357,8 @@ int main( int argc, char** argv )
 
     releaseMedianModel(&medianModel);
     releaseGaussianModel(&gaussianModel);
-
-
+*/
+/*
     // Question 5: nettoyage du resultat de la segmentation
     
     // a) une ouverture seule
@@ -345,4 +376,5 @@ int main( int argc, char** argv )
     cvReleaseImage(&frame);
     cvReleaseImage(&forMedian);
     cvReleaseImage(&forGauss);
+*/
 }
