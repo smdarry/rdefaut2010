@@ -108,4 +108,38 @@ void analysePixel(IplImage* frame, IplImage* mean, IplImage* sdv, int x, int y)
     printf("Diff/Std.: (%.2f, %.2f, %.2f)\n", r[0], r[1], r[2]);
 }
 
+IplConvKernel* createRectMask(int maskSize)
+{
+    int centerX = maskSize / 2;
+    int centerY = centerX;
+
+    // Cree un masque de la taille specifiee
+    IplConvKernel* mask = cvCreateStructuringElementEx(maskSize, maskSize, 
+                                                       centerX, centerY, 
+                                                       CV_SHAPE_RECT, NULL);
+    return mask;
+}
+
+void opening(IplImage* src, IplImage* dst, int maskSize)
+{
+    IplConvKernel* mask = createRectMask(maskSize);
+
+    // Une ouverture est une erosion suivie d'une dilatation
+    cvErode(src, dst, mask, 1);
+    cvDilate(dst, dst, mask, 1);
+
+    cvReleaseStructuringElement(&mask);
+}
+
+void closing(IplImage* src, IplImage* dst, int maskSize)
+{
+    IplConvKernel* mask = createRectMask(maskSize);
+
+    // Une fermeture est une dilation suivie d'une erosion 
+    cvDilate(src, dst, mask, 1);
+    cvErode(dst, dst, mask, 1);
+
+    cvReleaseStructuringElement(&mask);
+}
+
 #endif
