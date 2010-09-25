@@ -27,7 +27,7 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
     CvSize frameSize = cvSize(0, 0);
 
     IplImage* frame = NULL;
-    for(i = 0; i < IMAGE_COUNT; i += interval)
+    for(i = 0; i < frameCount; i += interval)
     {
         sprintf(filename, "%s/frame_%04d.jpg", dir, i);
 
@@ -40,11 +40,11 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
 
         // Garde l'image selectionnee dans le buffer circulaire
         // en prenant soin de liberer l'image qui se fera bumper
-        frameBufIndex = (frameBufIndex + 1) % frameCount;
         IplImage* outdatedFrame = frameBuffer[frameBufIndex];
         if(outdatedFrame != NULL)
             cvReleaseImage(&outdatedFrame);
         frameBuffer[frameBufIndex] = frame;
+        frameBufIndex = (frameBufIndex + 1) % frameCount;
     }
 }
 
