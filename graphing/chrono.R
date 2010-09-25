@@ -11,7 +11,7 @@ lines(A[3,], type="l", col="red")
 x = 1:count
 
 means = c(mean(A[1,]), mean(A[2,]), mean(A[3,]))
-sdvs = c(sd(A[1,]), sd(A[2,]), sd(A[3,]))
+sds = c(sd(A[1,]), sd(A[2,]), sd(A[3,]))
 mean_blue = array(means[1], c(1, count))
 mean_green = array(means[2], c(1, count))
 mean_red = array(means[3], c(1, count))
