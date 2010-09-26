@@ -159,30 +159,6 @@ IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
     return foregrd;
 }
 
-void opening(IplImage* src, IplImage* dst, int maskSize)
-{
-    // Cree un masque de la taille specifiee
-    IplConvKernel* mask = cvCreateStructuringElementEx(maskSize, maskSize, 0, 0, CV_SHAPE_RECT, NULL);
-    
-    // Une ouverture est une erosion suivie d'une dilatation
-    cvErode(src, dst, NULL, 1);
-    cvDilate(dst, dst, NULL, 1);
-
-    cvReleaseStructuringElement(&mask);
-}
-
-void closing(IplImage* src, IplImage* dst, int maskSize)
-{
-    // Cree un masque de la taille specifiee
-    IplConvKernel* mask = cvCreateStructuringElementEx(maskSize, maskSize, 0, 0, CV_SHAPE_RECT, NULL);
-
-    // Une fermeture est une dilation suivie d'une erosion 
-    cvDilate(src, dst, NULL, 1);
-    cvErode(dst, dst, NULL, 1);
-
-    cvReleaseStructuringElement(&mask);
-}
-
 void computePixelStatistics(char* dir, int imageCount)
 {
     // Histogrammes temporels pour 3 pixels
@@ -253,29 +229,32 @@ void computePixelStatistics(char* dir, int imageCount)
 
 int main( int argc, char** argv )
 {
+    int imageCount = 100;//IMAGE_COUNT;
+
     ////////////////////////////////////////
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
-    computePixelStatistics("../View_008", IMAGE_COUNT);
+    //computePixelStatistics("../View_008", imageCount);
     //computePixelStatistics("../View_008", 70);
 
-/*
+
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
     MedianModel medianModel;
     GaussianModel gaussianModel;
+    GaussianModel adaptiveGaussianModel;
 
-    IplImage* frameBuffer[IMAGE_COUNT];
+    IplImage* frameBuffer[imageCount];
 
     // Prend un echantillon d'images
-    selectFrames("../View_008", frameBuffer, IMAGE_COUNT, 1);
+    selectFrames("../View_008", frameBuffer, imageCount, 1);
 
     // Construction des modeles
-    //learnMedianModel(&medianModel, frameBuffer, IMAGE_COUNT);
-    learnGaussianModel(&gaussianModel, frameBuffer, IMAGE_COUNT);
-    //learnAdaptiveGaussian(&gaussianModel, "../View_008", IMAGE_COUNT, 0.5, 1);
+    learnMedianModel(&medianModel, frameBuffer, imageCount);
+    learnGaussianModel(&gaussianModel, frameBuffer, imageCount);
+    learnAdaptiveGaussian(&adaptiveGaussianModel, "../View_008", 0.5, imageCount, 1);
 
 
     /////////////////////////////////////////////////////////
@@ -288,31 +267,17 @@ int main( int argc, char** argv )
         fprintf(stderr, "Erreur de lecture de l'image %s\n", toSegment);
     }
 
-    IplImage* forMedian = segmentMedian(frame, 30.0, &medianModel);
-    IplImage* forGauss = segmentGaussian(frame, 9.0, &gaussianModel);
-
+    IplImage* forMedian = segmentMedian(frame, 40.0, &medianModel);
+    IplImage* forGauss = segmentGaussian(frame, 3.0, &gaussianModel);
     IplImage* forMean = segmentMean(frame, 50.0, &gaussianModel);
-    IplImage* forStdDev = segmentStdDev(frame, 9.0, &gaussianModel);
+    IplImage* forAdaMean = segmentMean(frame, 40.0, &adaptiveGaussianModel);
 
-    //cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
-    //cvShowImage("Foreground - Median", forMedian);
-
-    //cvNamedWindow("Foreground - Gaussian", CV_WINDOW_AUTOSIZE);
-    //cvShowImage("Foreground - Gaussian", forGauss);
-
-    cvNamedWindow("Foreground - Mean", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - Mean", forMean);
-
-    cvNamedWindow("Foreground - StdDev", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - StdDev", forStdDev);
-    
-    cvWaitKey(0);
-    
     cvSaveImage("Median.jpg", forMedian);
     cvSaveImage("Gaussian.jpg", forGauss);
     cvSaveImage("Mean.jpg", forMean);
-    cvSaveImage("StdDev.jpg", forStdDev);
+    cvSaveImage("MeanAdaptive.jpg", forAdaMean);
 
+/*
     // Pixels d'arriere-plan
     
     printf("\n==> Pixels d'arriere-plan\n");
@@ -350,14 +315,14 @@ int main( int argc, char** argv )
     analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 557, 170);
 
     //cvWaitKey(0);
-
+*/
 
     ////////////////////////////////////////////////////////
     // Question 4: etude de la mise a jour de l'arriere-plan
 
     releaseMedianModel(&medianModel);
     releaseGaussianModel(&gaussianModel);
-*/
+    releaseGaussianModel(&adaptiveGaussianModel);
 /*
     // Question 5: nettoyage du resultat de la segmentation
     
