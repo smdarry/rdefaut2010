@@ -137,8 +137,8 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
 {
     CvSize fSize = cvSize(0, 0);
 
-    IplImage* f = NULL, *mean = model->mean;
-    int stepm = mean->widthStep;
+    IplImage* f = NULL, *mean = NULL;
+    int stepm;
 
     char filename[256];
     char blue, green, red;
@@ -162,13 +162,15 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
             fSize = cvGetSize(f);
             initGaussianModel(model, fSize);
             cvCvtScale(f, model->mean, 1.0, 0);
+            mean = model->mean;
+            stepm = mean->widthStep;
         }
 
         // Mise a jour du modele Gaussien pixel par pixel
         int row, col, iStep;
-        for(row = 0; row < fSize.width; row++)
+        for(row = 0; row < fSize.height; row++)
         {
-            for(col = 0; col < fSize.height; col++)
+            for(col = 0; col < fSize.width; col++)
             {
                 iStep = f->widthStep;
 
@@ -189,8 +191,8 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
             
                 // Positionne les nouvelles valeurs de moyenne dans le modele
                 ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue; 
-                ((float*)(mean->imageData + stepm*row))[col*3 + 1] = meanGreen; 
-                ((float*)(mean->imageData + stepm*row))[col*3 + 2] = meanRed; 
+                ((float*)(mean->imageData + stepm*row))[col*3+1] = meanGreen; 
+                ((float*)(mean->imageData + stepm*row))[col*3+2] = meanRed; 
             }
         }
     }
