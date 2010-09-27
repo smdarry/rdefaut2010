@@ -4,7 +4,7 @@ title = paste("Chronogramme du pixel [", row, ", ", col, "]", sep="");
 A <- matrix(scan(cvs_file, n = 3 * count, sep = ','), count, 3);
 A <- t(A);
 
-plot(A[1,], type="l", col="blue", ylim=c(0, 255), xlab="Image no.", ylab="Intensite", main=title)
+plot(A[1,], type="l", col="blue", xlab="Image no.", ylab="Intensite", main=title)
 lines(A[2,], type="l", col="green")
 lines(A[3,], type="l", col="red")
 
