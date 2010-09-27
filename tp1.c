@@ -200,7 +200,7 @@ void computePixelStatistics(char* dir, int imageCount)
         updateChronogram(chrono3, frame, i, 217, 137);
 
         updateChronogram(chrono4, frame, i, 109, 167);
-        //updateChronogram(chrono5, frame, i, 596, 265);
+        updateChronogram(chrono5, frame, i, 410, 120);
         //updateChronogram(chrono6, frame, i, 217, 137);
 
         cvReleaseImage(&frame);
@@ -215,7 +215,7 @@ void computePixelStatistics(char* dir, int imageCount)
     writeChronogram(chrono3, "output/chrono_217x137.csv");
 
     writeChronogram(chrono4, "output/chrono_109x167.csv");
-    //writeChronogram(chrono5, "output/chrono_596x265.csv");
+    writeChronogram(chrono5, "output/chrono_410x120.csv");
     //writeChronogram(chrono6, "output/chrono_109x167.csv");
 
     cvReleaseMat(&chrono1);
@@ -229,16 +229,16 @@ void computePixelStatistics(char* dir, int imageCount)
 
 int main( int argc, char** argv )
 {
-    int imageCount = 100;//IMAGE_COUNT;
+    int imageCount = IMAGE_COUNT;
 
     ////////////////////////////////////////
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
-    //computePixelStatistics("../View_008", imageCount);
+    computePixelStatistics("../View_008", imageCount);
     //computePixelStatistics("../View_008", 70);
 
-
+/*
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
@@ -254,7 +254,7 @@ int main( int argc, char** argv )
     // Construction des modeles
     learnMedianModel(&medianModel, frameBuffer, imageCount);
     learnGaussianModel(&gaussianModel, frameBuffer, imageCount);
-    learnAdaptiveGaussian(&adaptiveGaussianModel, "../View_008", 0.5, imageCount, 1);
+    learnAdaptiveGaussian(&adaptiveGaussianModel, "../View_008", 0.05, imageCount, 1);
 
 
     /////////////////////////////////////////////////////////
@@ -277,6 +277,10 @@ int main( int argc, char** argv )
     cvSaveImage("Mean.jpg", forMean);
     cvSaveImage("MeanAdaptive.jpg", forAdaMean);
 
+    releaseMedianModel(&medianModel);
+    releaseGaussianModel(&gaussianModel);
+    releaseGaussianModel(&adaptiveGaussianModel);
+*/
 /*
     // Pixels d'arriere-plan
     
@@ -320,9 +324,6 @@ int main( int argc, char** argv )
     ////////////////////////////////////////////////////////
     // Question 4: etude de la mise a jour de l'arriere-plan
 
-    releaseMedianModel(&medianModel);
-    releaseGaussianModel(&gaussianModel);
-    releaseGaussianModel(&adaptiveGaussianModel);
 /*
     // Question 5: nettoyage du resultat de la segmentation
     
