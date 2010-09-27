@@ -227,10 +227,32 @@ void computePixelStatistics(char* dir, int imageCount)
     cvReleaseMat(&chrono6);
 }
 
+void openSave(IplImage* frame, int maskSize, char* filename)
+{
+    IplImage* tmp = cvCloneImage(frame);
+
+    opening(frame, tmp, maskSize);
+    cvSaveImage(filename, tmp);
+
+    cvReleaseImage(&tmp);
+}
+
+void openCloseSave(IplImage* frame, int maskSize, char* filename)
+{
+    IplImage* tmp = cvCloneImage(frame);
+
+    opening(frame, tmp, maskSize);
+    closing(tmp, tmp, maskSize);
+    cvSaveImage(filename, tmp);
+
+    cvReleaseImage(&tmp);
+}
+
 int main( int argc, char** argv )
 {
     int imageCount = IMAGE_COUNT;
 
+/*
     ////////////////////////////////////////
     // Question 1: problematique de la segmentation
 
@@ -238,7 +260,7 @@ int main( int argc, char** argv )
     computePixelStatistics("../View_008", imageCount);
     //computePixelStatistics("../View_008", 70);
 
-/*
+*/
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
 
@@ -280,67 +302,49 @@ int main( int argc, char** argv )
     releaseMedianModel(&medianModel);
     releaseGaussianModel(&gaussianModel);
     releaseGaussianModel(&adaptiveGaussianModel);
-*/
-/*
-    // Pixels d'arriere-plan
-    
-    printf("\n==> Pixels d'arriere-plan\n");
 
-    // Brique et feuillage dans le coin superieur gauche
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 10, 10);
-
-    // Ciment a droite des jambes de la 5e personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 596, 265);
-
-    // Ciment a droite des jambes de la 2e personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 325, 225);
-
-    // Ciment a gauche du corps de la 1ere personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 150, 180);
-
-    // Brique au dessus de la 3e personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 360, 77);
-
-    // Bruit dans l'image moyenne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 109, 167);
-
-
-    // Pixels d'avant-plan
-    
-    printf("\n==> Pixels d'avant-plan\n");
-
-    // Manteau de la 1ere personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 217, 137);
-
-    // Manteau de la 2e personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 312, 151);
-
-    // Manteau de la 5e personne
-    analysePixel(frame, gaussianModel.mean, gaussianModel.stdDev, 557, 170);
-
-    //cvWaitKey(0);
-*/
 
     ////////////////////////////////////////////////////////
     // Question 4: etude de la mise a jour de l'arriere-plan
 
-/*
+
+    ////////////////////////////////////////////////////////
     // Question 5: nettoyage du resultat de la segmentation
     
+    //
     // a) une ouverture seule
-    //opening(forMedian, forMedian, 3);
+    //
+    // Image medianne
+    openSave(forMedian, 3, "openMedian3.jpg");
+    openSave(forMedian, 5, "openMedian5.jpg");
     
-    // b) une ouverture puis une fermeture
-    opening(forMedian, forMedian, 3);
-    closing(forMedian, forMedian, 3);
+    // Image Gaussienne simple
+    openSave(forGauss, 3, "openGaussian3.jpg");
+    openSave(forGauss, 5, "openGaussian5.jpg");
 
-    cvNamedWindow("Foreground - Median", CV_WINDOW_AUTOSIZE);
-    cvShowImage("Foreground - Median", forMedian);
+    // Image moyenne
+    openSave(forMean, 3, "openMean3.jpg");
+    openSave(forMean, 5, "openMean5.jpg");
+
+    //
+    // b) une ouverture puis une fermeture
+    //
+    // Image medianne
+    openCloseSave(forMedian, 3, "openCloseMedian3.jpg");
+    openCloseSave(forMedian, 5, "openCloseMedian5.jpg");
     
-    cvWaitKey(0);
+    // Image Gaussienne simple
+    openCloseSave(forGauss, 3, "openCloseGaussian3.jpg");
+    openCloseSave(forGauss, 5, "openCloseGaussian5.jpg");
+
+    // Image moyenne
+    openCloseSave(forMean, 3, "openCloseMean3.jpg");
+    openCloseSave(forMean, 5, "openCloseMean5.jpg");
+
 
     cvReleaseImage(&frame);
     cvReleaseImage(&forMedian);
     cvReleaseImage(&forGauss);
-*/
+    cvReleaseImage(&forMean);
+    cvReleaseImage(&forAdaMean);
 }
