@@ -97,3 +97,57 @@ void writeChronogram(CvMat* c, char* filename)
     }
     fclose(fp);
 }
+
+void updateRunningMean(CvMat* c, IplImage* frame, int t, int x, int y, float a)
+{
+    int stepu = frame->widthStep;
+
+    // Obtient pointeur sur le pixel a [x, y]
+    uchar blue = ((uchar*)(frame->imageData + stepu*y))[x*3];
+    uchar green = ((uchar*)(frame->imageData + stepu*y))[x*3+1];
+    uchar red = ((uchar*)(frame->imageData + stepu*y))[x*3+2];
+
+    if(t == 0)
+    {
+        // Initialisation au temps 't = 0'
+        ((float*)c->data.ptr)[0] = (float)blue;
+        ((float*)c->data.ptr)[1] = (float)green;
+        ((float*)c->data.ptr)[2] = (float)red;
+    }
+    else
+    {
+        // Obtient les moyennes au temps 't-1'
+        float meanBlue = ((float*)c->data.ptr)[(t-1)*3];
+        float meanGreen = ((float*)c->data.ptr)[(t-1)*3+1];
+        float meanRed = ((float*)c->data.ptr)[(t-1)*3+2];
+
+        // Mise a jour de chaque plan au temps 't'
+        ((float*)c->data.ptr)[t*3] = a * blue + (1 - a) * meanBlue;
+        ((float*)c->data.ptr)[t*3+1] = a * green + (1 - a) * meanGreen;
+        ((float*)c->data.ptr)[t*3+2] = a * red + (1 - a) * meanRed;
+    }
+}
+
+void writeRunningMean(CvMat* c, char* filename)
+{
+    FILE* fp = fopen(filename, "w+");
+    if(fp == NULL)
+    {
+        fprintf(stderr, "Erreur de creation du fichier '%s'\n", filename);
+        return;
+    }
+
+    float mean;
+    int channel, t;
+    for(channel = 0; channel < 3; channel++)
+    {
+        for(t = 0; t < c->cols-1; t++)
+        {
+            mean = ((float*)c->data.ptr)[t*3+channel];
+            fprintf(fp, "%.2f,", mean);
+        }
+        mean = ((float*)c->data.ptr)[t*3+channel];
+        fprintf(fp, "%.2f\n", mean);
+    }
+    fclose(fp);
+}
