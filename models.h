@@ -18,13 +18,25 @@ typedef struct _modeleGaussien
  */
 typedef struct _modeleMedian
 {
+    float percentile;
+
     IplImage* median;
+    IplImage* high;
+    IplImage* low;
 } MedianModel;
 
-void initMedianModel(MedianModel* model, CvSize size)
+void initMedianModel(MedianModel* model, CvSize size, float percentile)
 {
+    model->percentile = percentile;
+
     model->median = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->median);
+
+    model->high = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    cvZero(model->high);
+
+    model->low = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    cvZero(model->low);
 }
 
 void initGaussianModel(GaussianModel* model, CvSize size)
@@ -40,6 +52,10 @@ void releaseMedianModel(MedianModel* model)
 {
     if(model->median != NULL)
         cvReleaseImage(&model->median);
+    if(model->high != NULL)
+        cvReleaseImage(&model->high);
+    if(model->low != NULL)
+        cvReleaseImage(&model->low);
 }
 
 void releaseGaussianModel(GaussianModel* model)
@@ -50,15 +66,18 @@ void releaseGaussianModel(GaussianModel* model)
         cvReleaseImage(&model->stdDev);
 }
 
-void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount)
+void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount, float percentile)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
 
-    initMedianModel(model, fSize);
-    IplImage *f, *median = model->median;
+    initMedianModel(model, fSize, percentile);
+    IplImage *f; 
+    IplImage *median = model->median, *pHigh = model->high, *pLow = model->low;
 
     char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float medianBlue, medianGreen, medianRed;
+    float pctHighBlue, pctHighGreen, pctHighRed;
+    float pctLowBlue, pctLowGreen, pctLowRed;
     int step = median->widthStep, iStep;
     int row, col, i;
     for(row = 0; row < fSize.height; row++)
@@ -80,10 +99,34 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             medianGreen = computeMedian(pixelsGreen, frameCount);
             medianRed = computeMedian(pixelsRed, frameCount);
 
+            // Calcul des centiles
+            pctHighBlue = computePercentile(pixelsBlue, frameCount, 
+                model->percentile);
+            pctHighGreen = computePercentile(pixelsGreen, frameCount, 
+                model->percentile);
+            pctHighRed = computePercentile(pixelsRed, frameCount, 
+                model->percentile);
+
+            pctLowBlue = computePercentile(pixelsBlue, frameCount, 
+                (1.0 - model->percentile));
+            pctLowGreen = computePercentile(pixelsGreen, frameCount, 
+                (1.0 - model->percentile));
+            pctLowRed = computePercentile(pixelsRed, frameCount, 
+                (1.0 - model->percentile));
+
             // Positionne les valeurs mediannes dans le modele
             ((float*)(median->imageData + step*row))[col*3] = medianBlue; 
-            ((float*)(median->imageData + step*row))[col*3 + 1] = medianGreen; 
-            ((float*)(median->imageData + step*row))[col*3 + 2] = medianRed; 
+            ((float*)(median->imageData + step*row))[col*3+1] = medianGreen; 
+            ((float*)(median->imageData + step*row))[col*3+2] = medianRed; 
+
+            // Pourcentiles
+            ((float*)(pHigh->imageData + step*row))[col*3] = pctHighBlue; 
+            ((float*)(pHigh->imageData + step*row))[col*3+1] = pctHighGreen; 
+            ((float*)(pHigh->imageData + step*row))[col*3+2] = pctHighRed; 
+
+            ((float*)(pLow->imageData + step*row))[col*3] = pctLowBlue; 
+            ((float*)(pLow->imageData + step*row))[col*3+1] = pctLowGreen; 
+            ((float*)(pLow->imageData + step*row))[col*3+2] = pctLowRed; 
         }
     }
 }
@@ -122,13 +165,13 @@ void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frame
 
             // Positionne les valeurs de moyenne dans le modele
             ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue; 
-            ((float*)(mean->imageData + stepm*row))[col*3 + 1] = meanGreen; 
-            ((float*)(mean->imageData + stepm*row))[col*3 + 2] = meanRed; 
+            ((float*)(mean->imageData + stepm*row))[col*3+1] = meanGreen; 
+            ((float*)(mean->imageData + stepm*row))[col*3+2] = meanRed; 
 
             // Positionne les valeurs d'ecart-type dans le modele
             ((float*)(sd->imageData + steps*row))[col*3] = sdvBlue; 
-            ((float*)(sd->imageData + steps*row))[col*3 + 1] = sdvGreen; 
-            ((float*)(sd->imageData + steps*row))[col*3 + 2] = sdvRed; 
+            ((float*)(sd->imageData + steps*row))[col*3+1] = sdvGreen; 
+            ((float*)(sd->imageData + steps*row))[col*3+2] = sdvRed; 
         }
     }
 }
@@ -190,9 +233,9 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
                 meanRed = alpha * red + (1 - alpha) * meanRed;
             
                 // Positionne les nouvelles valeurs de moyenne dans le modele
-                ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue; 
-                ((float*)(mean->imageData + stepm*row))[col*3+1] = meanGreen; 
-                ((float*)(mean->imageData + stepm*row))[col*3+2] = meanRed; 
+                ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue;
+                ((float*)(mean->imageData + stepm*row))[col*3+1] = meanGreen;
+                ((float*)(mean->imageData + stepm*row))[col*3+2] = meanRed;
             }
         }
     }
