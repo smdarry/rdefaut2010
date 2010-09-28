@@ -60,18 +60,15 @@ void updateChronogram(CvMat* c, IplImage* frame, int t, int x, int y)
 {
     int step = frame->widthStep;
 
-    // Obtient pointeur sur le pixel a [x, y]
+    // Obtient pixel en [x, y]
     uchar blue = ((uchar*)(frame->imageData + step*y))[x*3];
     uchar green = ((uchar*)(frame->imageData + step*y))[x*3+1];
     uchar red = ((uchar*)(frame->imageData + step*y))[x*3+2];
 
-    // Obtient un pointeur sur la destination au temps 't'
-    uchar* ptrDst = (uchar*)(c->data.ptr + t*3);
-
-    // Mise a jour de chaque plan au temps 't'
-    *ptrDst = blue;
-    *(ptrDst+1) = green;
-    *(ptrDst+2) = red;
+    // Mise a jour des intensites au temps 't'
+    ((uchar*)c->data.ptr)[t*3] = blue;
+    ((uchar*)c->data.ptr)[t*3+1] = green;
+    ((uchar*)c->data.ptr)[t*3+2] = red;
 }
 
 void writeChronogram(CvMat* c, char* filename)
@@ -83,17 +80,17 @@ void writeChronogram(CvMat* c, char* filename)
         return;
     }
 
-    uchar* ptr;
+    uchar pixel;
     int channel, t;
     for(channel = 0; channel < 3; channel++)
     {
         for(t = 0; t < c->cols-1; t++)
         {
-            ptr = (uchar*)(c->data.ptr + t*3);
-            fprintf(fp, "%d,", *(ptr+channel));
+            pixel = ((uchar*)c->data.ptr)[t*3+channel];
+            fprintf(fp, "%d,", pixel);
         }
-        ptr = (uchar*)(c->data.ptr + t*3);
-        fprintf(fp, "%d\n", *(ptr+channel));
+        pixel = ((uchar*)c->data.ptr)[t*3+channel];
+        fprintf(fp, "%d\n", pixel);
     }
     fclose(fp);
 }
