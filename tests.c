@@ -46,14 +46,29 @@ void testComputePercentile()
     ////////////////////
     // Test 1
     //
-    char testData1[3][9] = { {6,1,4,3,2,4,1,6,9},
+    char testData1[3][9] = { {5,1,4,3,2,4,1,6,9},
                         {13,9,11,11,10,11,12,10,11},
                         {1,0,0,1,2,1,1,2,0} };
 
     printf("\nTEST PERCENTILE\n");
 
-    char percentile = computePercentile(testData1[0], 9, 0.95);
-    printf("Expected: 9, Actual: %d\n", percentile);
+    float percentile = computePercentile(testData1[0], 9, 0.95);
+    printf("Expected: 7.80, Actual: %.2f\n", percentile);
+
+    percentile = computePercentile(testData1[0], 9, 0.05);
+    printf("Expected: 1.00, Actual: %.2f\n", percentile);
+
+    percentile = computePercentile(testData1[0], 9, 0.7);
+    printf("Expected: 4.60, Actual: %.2f\n", percentile);
+
+    percentile = computePercentile(testData1[0], 9, 1.0);
+    printf("Expected: 9.00, Actual: %.2f\n", percentile);
+
+    percentile = computePercentile(testData1[0], 9, 0.0);
+    printf("Expected: 1.00, Actual: %.2f\n", percentile);
+
+    percentile = computePercentile(testData1[0], 9, 0.5);
+    printf("Expected: 4.00, Actual: %.2f\n", percentile);
 }
 
 void testComputeMeanSdv()
