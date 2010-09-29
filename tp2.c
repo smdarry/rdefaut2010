@@ -20,31 +20,45 @@ void freeBlobs(CvMemStorage* storage)
     cvReleaseMemStorage(&storage);
 }
 
-int comparePoint(const void* a, const void* b, void* data)
+int isSmaller(const void* a, const void* b, void* data)
 {
     CvPoint* p1 = (CvPoint*)a;
     CvPoint* p2 = (CvPoint*)b;
    
     int dim = *((int*)data); 
-
+    
     if(dim == 0)
-        return p1->x > p2->x;
+        return (p1->x - p2->x);
 
-    return p1->y > p2->y;
+    return (p1->y - p2->y);
 }
 
-inline void boundingBox(CvSeq* seq)
+inline void boundingBox(CvSeq* seq, CvRect* box)
 {
+    int minX, maxX, minY, maxY;
+
     // dimension: x = 0, y = 1
     int dim;
 
     // Premier tri en y
     dim = 1;
-    cvSeqSort(seq, comparePoint, &dim);
+    cvSeqSort(seq, isSmaller, &dim);
 
+    minY = ((CvPoint*)cvGetSeqElem(seq, 0))->y;
+    maxY = ((CvPoint*)cvGetSeqElem(seq, seq->total-1))->y;
+    
     // Second tri en x
     dim = 0;
-    cvSeqSort(seq, comparePoint, &dim);
+    cvSeqSort(seq, isSmaller, &dim);
+
+    minX = ((CvPoint*)cvGetSeqElem(seq, 0))->x;
+    maxX = ((CvPoint*)cvGetSeqElem(seq, seq->total-1))->x;
+
+    // L'origine du restangle = point superieur gauche
+    box->x = minX;
+    box->y = maxX;
+    box->width = maxX - minX;
+    box->height = maxY - minY;
 }
 
 int main( int argc, char** argv )
@@ -77,7 +91,6 @@ int main( int argc, char** argv )
                 max = label;
         }
     }
-    printf("Max Label = %d\n", max);
 
     // Extraction des blobs
     // Allocation d'un vecteur de la taille determinee
@@ -106,11 +119,16 @@ int main( int argc, char** argv )
     }
 
     // Calcul des boites englobantes
+    CvRect box;
+    boundingBox(blobs[2], &box);
+
+/*
     int i;
     for(i = 0; i < blobCount; i++)
     {
-        //boundingBox(blobs[i]);
+        boundingBox(blobs[i]);
     }
+*/
 
     freeBlobs(storage);
 }
