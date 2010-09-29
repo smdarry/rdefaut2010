@@ -33,6 +33,14 @@ int isSmaller(const void* a, const void* b, void* data)
     return (p1->y - p2->y);
 }
 
+int cmpBlobs(const void* b1, const void* b2)
+{
+    CvSeq* s1 = (CvSeq*)b1;
+    CvSeq* s2 = (CvSeq*)b2;
+
+    return (s1->total - s2->total);
+}
+
 inline void boundingBox(CvSeq* seq, CvRect* box)
 {
     int minX, maxX, minY, maxY;
@@ -54,9 +62,18 @@ inline void boundingBox(CvSeq* seq, CvRect* box)
     minX = ((CvPoint*)cvGetSeqElem(seq, 0))->x;
     maxX = ((CvPoint*)cvGetSeqElem(seq, seq->total-1))->x;
 
+/*
+    int i;
+    for(i = 0; i < seq->total; i++)
+    {
+        CvPoint* p = (CvPoint*)cvGetSeqElem(seq, i);
+        printf("Element: %d,%d\n", p->x, p->y);
+    }
+*/
+
     // L'origine du restangle = point superieur gauche
     box->x = minX;
-    box->y = maxX;
+    box->y = minY;
     box->width = maxX - minX;
     box->height = maxY - minY;
 }
@@ -114,13 +131,53 @@ int main( int argc, char** argv )
                 p->x = col; p->y = row;
 
                 cvSeqPush(blobs[label-1], p);
+
+                if(label == 39)
+                {
+                    printf("pixel [%d]: %d,%d\n", label, col, row);
+                }
             }
         }
     }
 
-    // Calcul des boites englobantes
+/*
+    // Tri des blobs par nombre d'elements
+    qsort(blobs, blobCount, sizeof(CvSeq*), cmpBlobs);
+
+    int i;
+    for(i = 0; i < blobs[0]->total; i++)
+    {
+        CvPoint* p = (CvPoint*)cvGetSeqElem(blobs[0], i);
+        printf("Blob %d pixel: %d,%d\n", 0, p->x, p->y);
+    }
+*/
+
+/*
     CvRect box;
-    boundingBox(blobs[2], &box);
+    boundingBox(blobs[maxB], &box);
+
+    // Affichage des boites
+    CvPoint p1 = cvPoint(box.x, box.y);
+    CvPoint p2 = cvPoint(box.x + box.width, box.y + box.height);
+
+    cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+*/
+
+/*
+    // Calcul des boites englobantes
+    CvRect box[blobCount];
+    for(b = 0; b < blobCount; b++)
+    {
+        boundingBox(blobs[b], &box[b]);
+
+        // Affichage des boites
+        CvPoint p1 = cvPoint(box[b].x, box[b].y);
+        CvPoint p2 = cvPoint(box[b].x + box[b].width, box[b].y + box[b].height);
+
+        cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+    }
+*/
+    cvSaveImage("blobsImage.jpg", frame);
 
 /*
     int i;
@@ -131,4 +188,5 @@ int main( int argc, char** argv )
 */
 
     freeBlobs(storage);
+    cvReleaseImage(&frame);
 }
