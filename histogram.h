@@ -1,23 +1,25 @@
 #include <stdio.h>
 #include "utils.h"
 
-#define GRAY_LEVELS 256
-
 typedef struct _histogram
 {
-    int freq[3][GRAY_LEVELS];
+    int channels;
+    int bins;
+    int binWidth;
+    int* freq;
 } Histogram;
 
-void initHistogram(Histogram* h)
+void initHistogram(Histogram* h, int bins, int channels)
 {
-    int channel, i;
-    for(channel = 0; channel < 3; channel++)
-    {
-        for(i = 0; i < GRAY_LEVELS; i++)
-        {
-            h->freq[channel][i] = 0;
-        }
-    }
+    h->channels = channels;
+    h->bins = bins;
+    h->binWidth = 256 / bins;
+    h->freq = (int*)calloc(bins*channels, sizeof(int));
+}
+
+void releaseHistogram(Histogram* h)
+{
+    free(h->freq);
 }
 
 void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
@@ -29,10 +31,14 @@ void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
     uchar green = ((uchar*)(frame->imageData + step*y))[x*3+1];
     uchar red = ((uchar*)(frame->imageData + step*y))[x*3+2];
 
+    int binBlue = blue / h->binWidth;
+    int binGreen = green / h->binWidth;
+    int binRed = red / h->binWidth;
+
     // Mise a jour de chaque plan pour ce pixel
-    h->freq[0][blue]++;
-    h->freq[1][green]++;
-    h->freq[2][red]++;
+    ((int*)(h->freq + binBlue))[0]++;
+    ((int*)(h->freq + binGreen))[1]++;
+    ((int*)(h->freq + binRed))[2]++;
 }
 
 void writeHistogram(Histogram* h, char* filename)
@@ -44,14 +50,16 @@ void writeHistogram(Histogram* h, char* filename)
         return;
     }
 
-    int channel, i;
-    for(channel = 0; channel < 3; channel++)
+    int channel, i, freq;
+    for(channel = 0; channel < h->channels; channel++)
     {
-        for(i = 0; i < GRAY_LEVELS-1; i++)
+        for(i = 0; i < h->bins-1; i++)
         {
-            fprintf(fp, "%d,", (int)h->freq[channel][i]);
+            freq = ((int*)(h->freq + i))[channel];
+            fprintf(fp, "%d,", freq);
         }
-        fprintf(fp, "%d\n", (int)h->freq[channel][GRAY_LEVELS-1]);
+        freq = ((int*)(h->freq + i))[channel];
+        fprintf(fp, "%d\n", freq);
     }
     fclose(fp);
 }
