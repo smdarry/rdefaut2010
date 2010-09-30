@@ -1,74 +1,10 @@
 #include "cv.h"
 #include "highgui.h"
 #include "etiquette.h"
+#include "histogram.h"
+#include "blob.h"
 
 #include <stdio.h>
-
-void initBlobs(CvSeq* blobs[], int length, CvMemStorage* storage)
-{
-    int i;
-    for(i = 0; i < length; i++)
-    {
-        blobs[i] = cvCreateSeq(CV_SEQ_ELTYPE_POINT, sizeof(CvSeq), 
-                               sizeof(CvPoint), storage);
-    }
-}
-
-void freeBlobs(CvMemStorage* storage)
-{
-    // TODO: J'assume que chaque point va etre automatiquement libere!
-    cvReleaseMemStorage(&storage);
-}
-
-int isSmaller(const void* a, const void* b, void* data)
-{
-    CvPoint* p1 = (CvPoint*)a;
-    CvPoint* p2 = (CvPoint*)b;
-   
-    int dim = *((int*)data); 
-    
-    if(dim == 0)
-        return (p1->x - p2->x);
-
-    return (p1->y - p2->y);
-}
-
-inline void boundingBox(CvSeq* seq, CvRect* box)
-{
-    int minX, maxX, minY, maxY;
-
-    // dimension: x = 0, y = 1
-    int dim;
-
-    // Premier tri en y
-    dim = 1;
-    cvSeqSort(seq, isSmaller, &dim);
-
-    minY = ((CvPoint*)cvGetSeqElem(seq, 0))->y;
-    maxY = ((CvPoint*)cvGetSeqElem(seq, seq->total-1))->y;
-    
-    // Second tri en x
-    dim = 0;
-    cvSeqSort(seq, isSmaller, &dim);
-
-    minX = ((CvPoint*)cvGetSeqElem(seq, 0))->x;
-    maxX = ((CvPoint*)cvGetSeqElem(seq, seq->total-1))->x;
-
-/*
-    int i;
-    for(i = 0; i < seq->total; i++)
-    {
-        CvPoint* p = (CvPoint*)cvGetSeqElem(seq, i);
-        printf("Element: %d,%d\n", p->x, p->y);
-    }
-*/
-
-    // L'origine du restangle = point superieur gauche
-    box->x = minX;
-    box->y = minY;
-    box->width = maxX - minX;
-    box->height = maxY - minY;
-}
 
 int main( int argc, char** argv )
 {
@@ -77,6 +13,7 @@ int main( int argc, char** argv )
     if(frame == NULL)
     {
         fprintf(stderr, "Erreur de lecture de l'image %s\n", frameName);
+        return;
     }
 
     // Filtrage pour enlever les valeurs dues a la compression de l'image
@@ -90,14 +27,16 @@ int main( int argc, char** argv )
                                (int**)&matEtiq->data.ptr, frame->width, 
                                frame->height);
     printf("%d blobs trouves\n", blobCount);
+    cvReleaseImage(&imgEtiq);
 
-    // Allocation d'un vecteur de la taille determinee
-    CvSeq* blobs[blobCount];
+    Blob blobs[blobCount];
+
+    // Separation des pixels de chaque blob dans des listes chainees
+    CvSeq* blobPoints[blobCount];
     CvMemStorage* storage = cvCreateMemStorage(0);
 
-    initBlobs(blobs, blobCount, storage);
+    initPointSeqs(blobPoints, blobCount, storage);
     
-    // Collection des pixels de chaque blob
     CvPoint* p;
     int row, col, label;
     for(row = 0 ; row < matEtiq->rows; row++)
@@ -111,26 +50,65 @@ int main( int argc, char** argv )
                 p = (CvPoint*)malloc(sizeof(CvPoint));
                 p->x = col; p->y = row;
 
-                cvSeqPush(blobs[label-1], p);
+                cvSeqPush(blobPoints[label-1], p);
             }
         }
     }
 
-    // Calcul des boites englobantes
+    // Assigne la liste de points au blob correspondant
     int b;
-    CvRect box[blobCount];
+    for(b = 0; b < blobCount; b++)
+        blobs[b].points = blobPoints[b];
+
+    // Calcul des boites englobantes
     for(b = 0; b < blobCount; b++)
     {
-        boundingBox(blobs[b], &box[b]);
+        Blob blob = blobs[b];
+        boundingBox(&blob);
 
         // Affichage des boites
-        CvPoint p1 = cvPoint(box[b].x, box[b].y);
-        CvPoint p2 = cvPoint(box[b].x + box[b].width, box[b].y + box[b].height);
+        CvPoint p1 = cvPoint(blob.box.x, blob.box.y);
+        CvPoint p2 = cvPoint(blob.box.x + blob.box.width, blob.box.y + blob.box.height);
 
         cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
     }
     cvSaveImage("blobsImage.jpg", frame);
 
-    freeBlobs(storage);
+/*
+    // On a besoin de la frame originale pour calculer l'histogramme
+    const char* frameOrigName = "formesTest.ppm";
+    IplImage* frameOrig = cvLoadImage(frameOrigName, CV_LOAD_IMAGE_COLOR);
+    if(frameOrig == NULL)
+    {
+        fprintf(stderr, "Erreur de lecture de l'image %s\n", frameOrigName);
+        return;
+    }
+
+    // Construction des histogrammes sur l'image originale
+    int i;
+    Histogram h5, h10, h15;
+    initHistogram(&h5, 5, 3);
+    initHistogram(&h10, 10, 3);
+    initHistogram(&h15, 15, 3);
+
+    for(i = 0; i < blobs[0]->total; i++)
+    {
+        CvPoint* p = (CvPoint*)cvGetSeqElem(blobs[0], i);
+
+        updateHistogram(&h5, frameOrig, p->x, p->y);
+        updateHistogram(&h10, frameOrig, p->x, p->y);
+        updateHistogram(&h15, frameOrig, p->x, p->y);
+    }
+
+    writeHistogram(&h5, "hist_f1_5.cvs");
+    writeHistogram(&h10, "hist_f1_10.cvs");
+    writeHistogram(&h15, "hist_f1_15.cvs");
+
+    releaseHistogram(&h5);
+    releaseHistogram(&h10);
+    releaseHistogram(&h15);
+*/
+
+    freePointSeqs(storage);
     cvReleaseImage(&frame);
 }
