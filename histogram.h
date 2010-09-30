@@ -6,7 +6,7 @@ typedef struct _histogram
     int channels;
     int bins;
     int binWidth;
-    int* freq;
+    int** freq;
 } Histogram;
 
 void initHistogram(Histogram* h, int bins, int channels)
@@ -14,11 +14,18 @@ void initHistogram(Histogram* h, int bins, int channels)
     h->channels = channels;
     h->bins = bins;
     h->binWidth = 256 / bins;
-    h->freq = (int*)calloc(bins*channels, sizeof(int));
+    h->freq = (int**)malloc(bins*sizeof(int*));
+
+    int i;
+    for(i = 0; i < bins; i++)
+        h->freq[i] = calloc(channels, sizeof(int));
 }
 
 void releaseHistogram(Histogram* h)
 {
+    int i;
+    for(i = 0; i < h->bins; i++)
+        free(h->freq[i]);
     free(h->freq);
 }
 
@@ -36,9 +43,9 @@ void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
     int binRed = red / h->binWidth;
 
     // Mise a jour de chaque plan pour ce pixel
-    ((int*)(h->freq + binBlue))[0]++;
-    ((int*)(h->freq + binGreen))[1]++;
-    ((int*)(h->freq + binRed))[2]++;
+    h->freq[binBlue][0]++;
+    h->freq[binGreen][1]++;
+    h->freq[binRed][2]++;
 }
 
 void writeHistogram(Histogram* h, char* filename)
@@ -55,10 +62,10 @@ void writeHistogram(Histogram* h, char* filename)
     {
         for(i = 0; i < h->bins-1; i++)
         {
-            freq = ((int*)(h->freq + i))[channel];
+            freq = h->freq[i][channel];
             fprintf(fp, "%d,", freq);
         }
-        freq = ((int*)(h->freq + i))[channel];
+        freq = h->freq[i][channel];
         fprintf(fp, "%d\n", freq);
     }
     fclose(fp);
