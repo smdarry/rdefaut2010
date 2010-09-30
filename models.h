@@ -74,7 +74,7 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
     IplImage *f; 
     IplImage *median = model->median, *pHigh = model->high, *pLow = model->low;
 
-    char pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
+    uchar pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float medianBlue, medianGreen, medianRed;
     float pctHighBlue, pctHighGreen, pctHighRed;
     float pctLowBlue, pctLowGreen, pctLowRed;
@@ -184,7 +184,7 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
     int stepm;
 
     char filename[256];
-    char blue, green, red;
+    uchar blue, green, red;
     float meanBlue, meanGreen, meanRed;
 
     int i;
@@ -231,12 +231,13 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
                 meanBlue = alpha * blue + (1 - alpha) * meanBlue;
                 meanGreen = alpha * green + (1 - alpha) * meanGreen;
                 meanRed = alpha * red + (1 - alpha) * meanRed;
-            
+
                 // Positionne les nouvelles valeurs de moyenne dans le modele
                 ((float*)(mean->imageData + stepm*row))[col*3] = meanBlue;
                 ((float*)(mean->imageData + stepm*row))[col*3+1] = meanGreen;
                 ((float*)(mean->imageData + stepm*row))[col*3+2] = meanRed;
             }
         }
+        cvReleaseImage(&f);
     }
 }
