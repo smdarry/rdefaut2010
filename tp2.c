@@ -33,14 +33,6 @@ int isSmaller(const void* a, const void* b, void* data)
     return (p1->y - p2->y);
 }
 
-int cmpBlobs(const void* b1, const void* b2)
-{
-    CvSeq* s1 = (CvSeq*)b1;
-    CvSeq* s2 = (CvSeq*)b2;
-
-    return (s1->total - s2->total);
-}
-
 inline void boundingBox(CvSeq* seq, CvRect* box)
 {
     int minX, maxX, minY, maxY;
@@ -87,43 +79,32 @@ int main( int argc, char** argv )
         fprintf(stderr, "Erreur de lecture de l'image %s\n", frameName);
     }
 
+    // Filtrage pour enlever les valeurs dues a la compression de l'image
+    cvThreshold(frame, frame, 200, 255, CV_THRESH_BINARY);
+
+    // Extraction des blobs
     CvMat* matEtiq = cvCreateMatHeader(frame->height, frame->width, CV_32SC1);
     IplImage *imgEtiq = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
 
-    etiquetage((uchar*)frame->imageData, (int**)&matEtiq->data.ptr, 
-                frame->width, frame->height);
-    convertEtiq(&matEtiq, imgEtiq);
+    int blobCount = etiquetage((uchar*)frame->imageData, 
+                               (int**)&matEtiq->data.ptr, frame->width, 
+                               frame->height);
+    printf("%d blobs trouves\n", blobCount);
 
-    cvSaveImage("imEtiq.pgm", imgEtiq);
-
-    // Premiere passe pour determiner le nombre de blobs
-    int label, row, col;
-    int max = 0, step = matEtiq->step;
-    for(row = 0 ; row < matEtiq->rows; row++)
-    {
-        for(col = 0; col < matEtiq->cols; col++)
-        {
-            label = ((int*)(matEtiq->data.ptr + matEtiq->cols*row))[col];
-            if(label > max)
-                max = label;
-        }
-    }
-
-    // Extraction des blobs
     // Allocation d'un vecteur de la taille determinee
-    int blobCount = max;
     CvSeq* blobs[blobCount];
     CvMemStorage* storage = cvCreateMemStorage(0);
 
     initBlobs(blobs, blobCount, storage);
     
-    // Deuxieme passe: extraction des blobs
+    // Collection des pixels de chaque blob
     CvPoint* p;
+    int row, col, label;
     for(row = 0 ; row < matEtiq->rows; row++)
     {
         for(col = 0; col < matEtiq->cols; col++)
         {
-            label = ((int*)(matEtiq->data.ptr + matEtiq->cols*row))[col];
+            label = ((int*)(matEtiq->data.i + matEtiq->cols*row))[col];
             if(label > 0)
             {
                 // Ajoute un point dans la bonne liste
@@ -131,40 +112,12 @@ int main( int argc, char** argv )
                 p->x = col; p->y = row;
 
                 cvSeqPush(blobs[label-1], p);
-
-                if(label == 39)
-                {
-                    printf("pixel [%d]: %d,%d\n", label, col, row);
-                }
             }
         }
     }
 
-/*
-    // Tri des blobs par nombre d'elements
-    qsort(blobs, blobCount, sizeof(CvSeq*), cmpBlobs);
-
-    int i;
-    for(i = 0; i < blobs[0]->total; i++)
-    {
-        CvPoint* p = (CvPoint*)cvGetSeqElem(blobs[0], i);
-        printf("Blob %d pixel: %d,%d\n", 0, p->x, p->y);
-    }
-*/
-
-/*
-    CvRect box;
-    boundingBox(blobs[maxB], &box);
-
-    // Affichage des boites
-    CvPoint p1 = cvPoint(box.x, box.y);
-    CvPoint p2 = cvPoint(box.x + box.width, box.y + box.height);
-
-    cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
-*/
-
-/*
     // Calcul des boites englobantes
+    int b;
     CvRect box[blobCount];
     for(b = 0; b < blobCount; b++)
     {
@@ -176,16 +129,7 @@ int main( int argc, char** argv )
 
         cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
     }
-*/
     cvSaveImage("blobsImage.jpg", frame);
-
-/*
-    int i;
-    for(i = 0; i < blobCount; i++)
-    {
-        boundingBox(blobs[i]);
-    }
-*/
 
     freeBlobs(storage);
     cvReleaseImage(&frame);
