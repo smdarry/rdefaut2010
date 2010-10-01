@@ -5,7 +5,7 @@ typedef struct _histogram
 {
     int channels;
     int bins;
-    int binWidth;
+    float binWidth;
     int** freq;
 } Histogram;
 
@@ -13,7 +13,7 @@ void initHistogram(Histogram* h, int bins, int channels)
 {
     h->channels = channels;
     h->bins = bins;
-    h->binWidth = 256 / bins;
+    h->binWidth = 256.0 / bins;
     h->freq = (int**)malloc(bins*sizeof(int*));
 
     int i;
