@@ -1,3 +1,6 @@
+#ifndef _HISTOGRAM_H_
+#define _HISTOGRAM_H_
+
 #include <stdio.h>
 #include "utils.h"
 
@@ -69,6 +72,31 @@ void writeHistogram(Histogram* h, char* filename)
         fprintf(fp, "%d\n", freq);
     }
     fclose(fp);
+}
+
+float absDiffHistograms(Histogram* h1, Histogram* h2, int channel)
+{
+     // Verification si les deux histogrammes sont comparables
+     if(h1->bins != h2->bins)
+     {
+         fprintf(stderr, "Histogrammes non comparables: nombre de bins differe");
+         return -1;
+     }
+     if(h1->channels != h2->channels)
+     {
+         fprintf(stderr, "Histogrammes non comparables: nombre de canaux differe");
+         return -1;
+     }
+         
+     // On parcourt les bins et on effectue la somme des diffs absolues
+     int b;
+     float sum = 0.0;
+     for(b = 0; b < h1->bins; b++)
+     {
+         sum += fabs(h1->freq[b][channel] - h2->freq[b][channel]);
+     }
+     
+     return sum;
 }
 
 void updateChronogram(CvMat* c, IplImage* frame, int t, int x, int y)
@@ -163,3 +191,5 @@ void writeRunningMean(CvMat* c, char* filename)
     }
     fclose(fp);
 }
+
+#endif
