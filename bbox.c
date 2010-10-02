@@ -31,4 +31,7 @@ int main( int argc, char** argv )
 
     // Dessine les boites englobantes
     drawBoundingRects(frame, blobs, blobCount);
+    cvSaveImage("bbox-output.pgm", frame);
+
+    releaseBlobs(blobs);
 }
