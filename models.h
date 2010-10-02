@@ -23,6 +23,7 @@ typedef struct _modeleMedian
     IplImage* median;
     IplImage* high;
     IplImage* low;
+    IplImage* stdDev;
 } MedianModel;
 
 void initMedianModel(MedianModel* model, CvSize size, float percentile)
@@ -37,6 +38,9 @@ void initMedianModel(MedianModel* model, CvSize size, float percentile)
 
     model->low = cvCreateImage(size, IPL_DEPTH_32F, 3);
     cvZero(model->low);
+
+    model->stdDev = cvCreateImage(size, IPL_DEPTH_32F, 3);
+    cvZero(model->stdDev);
 }
 
 void initGaussianModel(GaussianModel* model, CvSize size)
@@ -56,6 +60,8 @@ void releaseMedianModel(MedianModel* model)
         cvReleaseImage(&model->high);
     if(model->low != NULL)
         cvReleaseImage(&model->low);
+    if(model->stdDev != NULL)
+        cvReleaseImage(&model->stdDev);
 }
 
 void releaseGaussianModel(GaussianModel* model)
@@ -73,11 +79,13 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
     initMedianModel(model, fSize, percentile);
     IplImage *f; 
     IplImage *median = model->median, *pHigh = model->high, *pLow = model->low;
+    IplImage* sd = model->stdDev;
 
     uchar pixelsBlue[frameCount], pixelsGreen[frameCount], pixelsRed[frameCount];
     float medianBlue, medianGreen, medianRed;
     float pctHighBlue, pctHighGreen, pctHighRed;
     float pctLowBlue, pctLowGreen, pctLowRed;
+    float sdvBlue, sdvGreen, sdvRed;
     int step = median->widthStep, iStep;
     int row, col, i;
     for(row = 0; row < fSize.height; row++)
@@ -114,6 +122,11 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             pctLowRed = computePercentile(pixelsRed, frameCount, 
                 (1.0 - model->percentile));
 
+            // Calcul des ecart-types
+            computeMeanSdv(pixelsBlue, frameCount, NULL, &sdvBlue);
+            computeMeanSdv(pixelsGreen, frameCount, NULL, &sdvGreen);
+            computeMeanSdv(pixelsRed, frameCount, NULL, &sdvRed);
+
             // Positionne les valeurs mediannes dans le modele
             ((float*)(median->imageData + step*row))[col*3] = medianBlue; 
             ((float*)(median->imageData + step*row))[col*3+1] = medianGreen; 
@@ -127,6 +140,11 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             ((float*)(pLow->imageData + step*row))[col*3] = pctLowBlue; 
             ((float*)(pLow->imageData + step*row))[col*3+1] = pctLowGreen; 
             ((float*)(pLow->imageData + step*row))[col*3+2] = pctLowRed; 
+
+            // Ecart-types
+            ((float*)(sd->imageData + step*row))[col*3] = sdvBlue;
+            ((float*)(sd->imageData + step*row))[col*3+1] = sdvGreen;
+            ((float*)(sd->imageData + step*row))[col*3+2] = sdvRed;
         }
     }
 }
@@ -278,7 +296,7 @@ IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
     return foregrd;
 }
 
-IplImage* segmentMedianStdDev(IplImage* frame, int k, MedianModel* mm, GaussianModel* gm)
+IplImage* segmentMedianStdDev(IplImage* frame, int k, MedianModel* mm)
 {
     // Images intermediaires
     IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
@@ -299,7 +317,7 @@ IplImage* segmentMedianStdDev(IplImage* frame, int k, MedianModel* mm, GaussianM
     cvAbsDiff(frameF, mm->median, diff);
 
     // Creation de l'image seuil definie en fonction de l'ecart-type
-    cvScale(gm->stdDev, threshold, k, 0.0);
+    cvScale(mm->stdDev, threshold, k, 0.0);
 
     // Les differences au dela de l'image seuil (positives) sont l'avant-plan
     cvSub(diff, threshold, foregrdF, NULL);
