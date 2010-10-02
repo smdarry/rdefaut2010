@@ -41,15 +41,18 @@ float computePercentile(uchar pixels[], int size, float percentile)
 
 void computeMeanSdv(uchar pixelArray[], int size, float* mean, float* sdv)
 {
-    *mean = 0.0, *sdv = 0.0;
+    float m = 0.0, s = 0.0;
     
     // Moyenne
     int i;
     for(i = 0; i < size; i++)
     {
-        *mean += pixelArray[i];
+        m += pixelArray[i];
     }
-    *mean /= size;
+    m /= size;
+
+    if(mean != NULL)
+        *mean = m;
 
     // et l'ecart-type...
     if(sdv == NULL) return;
@@ -57,8 +60,11 @@ void computeMeanSdv(uchar pixelArray[], int size, float* mean, float* sdv)
     float sdiff;
     for(i = 0; i < size; i++)
     {
-        sdiff = pixelArray[i] - *mean;
-        *sdv += sdiff * sdiff;
+        sdiff = pixelArray[i] - m;
+        s += sdiff * sdiff;
     }
-    *sdv = sqrt(*sdv / size);
+    s = sqrt(s / size);
+
+    if(sdv != NULL)
+        *sdv = s;
 }
