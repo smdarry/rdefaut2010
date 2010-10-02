@@ -2,6 +2,8 @@
 #define _UTILS_H_
 
 #include "cv.h"
+#include "highgui.h"
+
 #include <stdio.h>
 
 void printFrame(IplImage* frame, int channel, char* filename)
@@ -140,6 +142,67 @@ void closing(IplImage* src, IplImage* dst, int maskSize)
     cvErode(dst, dst, mask, 1);
 
     cvReleaseStructuringElement(&mask);
+}
+
+void openSave(IplImage* frame, int maskSize, char* filename)
+{
+    IplImage* tmp = cvCloneImage(frame);
+
+    opening(frame, tmp, maskSize);
+    cvSaveImage(filename, tmp);
+
+    cvReleaseImage(&tmp);
+}
+
+void openCloseSave(IplImage* frame, int maskSize, char* filename)
+{
+    IplImage* tmp = cvCloneImage(frame);
+
+    opening(frame, tmp, maskSize);
+    closing(tmp, tmp, maskSize);
+    cvSaveImage(filename, tmp);
+
+    cvReleaseImage(&tmp);
+}
+
+/**
+ * TODO: Fonctionne sous la supposition que le frameBuffer sera toujours plein.
+ */
+void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interval)
+{
+    // Un buffer circulaire permet de ne garder que les n dernieres frames
+    int frameBufIndex = 0;
+
+    // Initialize les pointeurs d'image a NULL
+    int i;
+    for(i = 0; i < frameCount; i++)
+    {
+        frameBuffer[i] = NULL;
+    }
+
+    char filename[256];
+    CvSize frameSize = cvSize(0, 0);
+
+    IplImage* frame = NULL;
+    for(i = 0; i < frameCount; i += interval)
+    {
+        sprintf(filename, "%s/frame_%04d.jpg", dir, i);
+
+        frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(frame == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+
+        // Garde l'image selectionnee dans le buffer circulaire
+        // en prenant soin de liberer l'image qui se fera bumper
+        IplImage* outdatedFrame = frameBuffer[frameBufIndex];
+        if(outdatedFrame != NULL)
+            cvReleaseImage(&outdatedFrame);
+        frameBuffer[frameBufIndex] = frame;
+        frameBufIndex = (frameBufIndex + 1) % frameCount;
+    }
 }
 
 #endif
