@@ -51,6 +51,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         
         ////////////////////////////////////////////
         // Etape 2: segmentation utilisant un modele
+         
         segFrame = segmentMedianStdDev(frame, 2.0, &medianModel);
         
         opening(segFrame, segFrame, 3);
@@ -58,13 +59,24 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         
 
         ///////////////////////////////////////////////////////////
-        // Etape 3: extraction des blobs et de ses caracteristiques
+        // Etape 3: extraction des blobs et de leur caracteristiques
+        
         Blob* blobs;
+
+        // Extraction des blobs
         int blobCount = extractBlobs(segFrame, frame, &blobs);
     
         drawBoundingRects(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
         cvSaveImage(filename, segFrame);
+
+        // Filtrage des blobs trop petits
+
+        // Calcul des histogrammes pour chaque blob
+        for(b = 0; b < blobCount; b++)
+        {
+            buildHistograms(&blobs[b], frame);
+        }
     
         if(previousBlobs != NULL)
         {
@@ -74,7 +86,10 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
             // Matrice des combinaisons de recouvrements spatiaux
             CvMat* mSpatial = cvCreateMat(previousBlobCount, 
                                           blobCount, CV_32FC1);
-            float coverage;
+            // Matrice des differences d'histogramme
+            CvMat* mHist = cvCreateMat(previousBlobCount, blobCount, CV_32FC1);
+
+            float coverage, absDiff;
             int step = mSpatial->step;
             for(pb = 0; pb < previousBlobCount; pb++)
             {
@@ -82,6 +97,8 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
                 {
                     coverage = percentOverlap(&previousBlobs[pb], &blobs[b]);
                     ((float*)(mSpatial->data.ptr + pb*step))[b] = coverage;
+
+                    //absDiff = absDiffHistograms();
                 }
             }
             writeDistanceMatrix(mSpatial);
