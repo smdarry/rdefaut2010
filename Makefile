@@ -1,4 +1,4 @@
-all: tp1 tp2 tests nettoyage
+all: tp1 tp2 tests nettoyage bbox
 tp1: tp1.o
 	gcc -o tp1 tp1.o `pkg-config opencv --libs`
 tp1.o: tp1.c histogram.h models.h stats.h utils.h
@@ -7,6 +7,8 @@ tests: tests.c stats.h
 	gcc -g -o tests tests.c `pkg-config opencv --libs` `pkg-config opencv --cflags`
 nettoyage: nettoyage.c
 	gcc -g -o nettoyage nettoyage.c `pkg-config opencv --libs` `pkg-config opencv --cflags`
+bbox: bbox.c blob.h
+	gcc -g -o bbox bbox.c etiquette.o `pkg-config opencv --libs` `pkg-config opencv --cflags`
 
 tp2: tp2.o etiquette.o
 	gcc -o tp2 tp2.o etiquette.o `pkg-config opencv --libs`
