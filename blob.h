@@ -8,6 +8,8 @@ typedef struct _blob
     int label;
 
     CvSeq* points;
+    CvMemStorage* storage;
+
     CvRect box;
 
     Histogram h5;
@@ -23,12 +25,6 @@ void initPointSeqs(CvSeq* seqs[], int length, CvMemStorage* storage)
         seqs[i] = cvCreateSeq(CV_SEQ_ELTYPE_POINT, sizeof(CvSeq), 
                                sizeof(CvPoint), storage);
     }
-}
-
-void freePointSeqs(CvMemStorage* storage)
-{
-    // TODO: J'assume que chaque point va etre automatiquement libere!
-    cvReleaseMemStorage(&storage);
 }
 
 int isSmaller(const void* a, const void* b, void* data)
@@ -161,6 +157,7 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     {
         newBlobs[b].label = b + 1;
         newBlobs[b].points = blobPoints[b];
+        newBlobs[b].storage = storage;
     }
 
     // Calcul des boites englobantes
@@ -172,6 +169,12 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     *blobs = newBlobs;
 
     return blobCount;
+}
+
+void releaseBlobs(Blob* blobs)
+{
+    cvReleaseMemStorage(&blobs->storage);
+    free(blobs);
 }
 
 void drawBoundingRects(IplImage* binFrame, Blob* blobs, int blobCount)
