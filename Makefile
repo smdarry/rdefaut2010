@@ -13,11 +13,6 @@ tp2.o: tp2.c histogram.h blob.h etiquette.h
 etiquette.o: etiquette.c etiquette.h
 	gcc -g -o etiquette.o -c etiquette.c `pkg-config opencv --cflags`
 
-tp: tp.o etiquette.o
-	gcc -o tp tp.o etiquette.o `pkg-config opencv --libs`
-tp.o: tp.c etiquette.o
-	gcc -g -o tp.o -c tp.c `pkg-config opencv --cflags`
-
 # Utilitaires
 nettoyage: nettoyage.c
 	gcc -g -o nettoyage nettoyage.c `pkg-config opencv --libs` `pkg-config opencv --cflags`
