@@ -122,7 +122,8 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     cvThreshold(binFrame, binFrame, 200, 255, CV_THRESH_BINARY);
 
     // Extraction des blobs
-    CvMat* matEtiq = cvCreateMatHeader(binFrame->height, binFrame->width, CV_32SC1);
+    CvMat* matEtiq = cvCreateMatHeader(binFrame->height, binFrame->width, 
+                                       CV_32SC1);
     IplImage *imgEtiq = cvCreateImage(cvGetSize(binFrame), IPL_DEPTH_8U, 1);
 
     int blobCount = etiquetage((uchar*)binFrame->imageData, 
@@ -156,6 +157,7 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
             }
         }
     }
+
 
     // Assigne la liste de points au blob correspondant
     int b;
