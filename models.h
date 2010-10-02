@@ -241,3 +241,193 @@ void learnAdaptiveGaussian(GaussianModel* model, char* dir, float alpha, int ima
         cvReleaseImage(&f);
     }
 }
+
+IplImage* segmentMedian(IplImage* frame, float threshold, MedianModel* mm)
+{
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > threshold => (P == foreground)
+    // sur chaque plan
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, mm->median, diff);
+
+    cvCvtScale(diff, foregrdA, 1, 0);
+    cvThreshold(foregrdA, foregrdA, threshold, 255, CV_THRESH_BINARY);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    cvReleaseImage(&frameF);
+    cvReleaseImage(&diff);
+    cvReleaseImage(&foregrdA);
+    cvReleaseImage(&foregrdB);
+    cvReleaseImage(&foregrdG);
+    cvReleaseImage(&foregrdR);
+
+    return foregrd;
+}
+
+IplImage* segmentMedianStdDev(IplImage* frame, int k, MedianModel* mm, GaussianModel* gm)
+{
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
+    // sur chaque plan
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, mm->median, diff);
+
+    // Creation de l'image seuil definie en fonction de l'ecart-type
+    cvScale(gm->stdDev, threshold, k, 0.0);
+
+    // Les differences au dela de l'image seuil (positives) sont l'avant-plan
+    cvSub(diff, threshold, foregrdF, NULL);
+    cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
+    cvScale(foregrdF, foregrdA, 1, 0);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    cvReleaseImage(&frameF);
+    cvReleaseImage(&diff);
+    cvReleaseImage(&threshold);
+    cvReleaseImage(&foregrdF);
+    cvReleaseImage(&foregrdA);
+    cvReleaseImage(&foregrdB);
+    cvReleaseImage(&foregrdG);
+    cvReleaseImage(&foregrdR);
+
+    return foregrd;
+}
+
+IplImage* segmentPercentile(IplImage* frame, MedianModel* mm)
+{
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* diffH = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* diffL = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+
+    cvCvtScale(frame, frameF, 1, 0);
+
+    // On met a 255 les differences positives (tombent dans poucentile extreme)
+    cvSub(frameF, mm->high, diffH, NULL);
+    cvThreshold(diffH, diffH, 0.0, 255, CV_THRESH_BINARY);
+
+    cvSub(mm->low, frameF, diffL, NULL);
+    cvThreshold(diffL, diffL, 0.0, 255, CV_THRESH_BINARY);
+
+    cvOr(diffH, diffL, foregrdF, NULL);
+    cvScale(foregrdF, foregrd, 1, 0);
+
+    cvReleaseImage(&diffH);
+    cvReleaseImage(&diffL);
+    cvReleaseImage(&foregrdF);
+
+    return foregrd;
+}
+
+IplImage* segmentGaussian(IplImage* frame, float k, GaussianModel* gm)
+{
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* threshold = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
+    // sur chaque plan
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, gm->mean, diff);
+
+    // Creation de l'image seuil definie en fonction de l'ecart-type
+    cvScale(gm->stdDev, threshold, k, 0.0);
+
+    // Les differences au dela de l'image seuil (positives) sont l'avant-plan
+    cvSub(diff, threshold, foregrdF, NULL);
+    cvThreshold(foregrdF, foregrdF, 0.0, 255, CV_THRESH_BINARY);
+    cvScale(foregrdF, foregrdA, 1, 0);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    cvReleaseImage(&frameF);
+    cvReleaseImage(&diff);
+    cvReleaseImage(&threshold);
+    cvReleaseImage(&foregrdF);
+    cvReleaseImage(&foregrdA);
+    cvReleaseImage(&foregrdB);
+    cvReleaseImage(&foregrdG);
+    cvReleaseImage(&foregrdR);
+
+    return foregrd;
+}
+
+IplImage* segmentMean(IplImage* frame, float threshold, GaussianModel* gm)
+{
+    printFrame(gm->mean, 0, "meanBlue.csv");
+    printFrame(gm->mean, 1, "meanGreen.csv");
+    printFrame(gm->mean, 2, "meanRed.csv");
+
+    // Images intermediaires
+    IplImage* frameF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* diff = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3);
+    IplImage* foregrdF = cvCreateImage(cvGetSize(frame), IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
+
+    // Applique la regle: si |P - M_P| > k * sigma => (P == foreground)
+    // sur chaque plan
+    cvCvtScale(frame, frameF, 1, 0);
+    cvAbsDiff(frameF, gm->mean, diff);
+
+    cvCvtScale(diff, foregrdA, 1, 0);
+    cvThreshold(foregrdA, foregrdA, threshold, 255, CV_THRESH_BINARY);
+
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    return foregrd;
+}
