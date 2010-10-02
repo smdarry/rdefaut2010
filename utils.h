@@ -205,4 +205,27 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
     }
 }
 
+void pickFrames(char* dir, IplImage* frameBuffer[], int frameBegin, int frameEnd)
+{
+    int frameBufIndex = 0;
+    char filename[256];
+    CvSize frameSize = cvSize(0, 0);
+
+    IplImage* frame = NULL;
+    int i;
+    for(i = frameBegin; i <= frameEnd; i++)
+    {
+        sprintf(filename, "%s/frame_%04d.jpg", dir, i);
+
+        frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(frame == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+        frameBuffer[frameBufIndex] = frame;
+        frameBufIndex++;
+    }
+}
+
 #endif
