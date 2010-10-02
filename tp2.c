@@ -74,9 +74,8 @@ int main( int argc, char** argv )
     }
     cvSaveImage("blobsImage.jpg", frame);
 
-/*
-    // On a besoin de la frame originale pour calculer l'histogramme
-    const char* frameOrigName = "formesTest.ppm";
+    // Charge la frame originale (couleur) pour calculer l'histogramme
+    const char* frameOrigName = "../View_008/frame_0061.jpg";
     IplImage* frameOrig = cvLoadImage(frameOrigName, CV_LOAD_IMAGE_COLOR);
     if(frameOrig == NULL)
     {
@@ -84,31 +83,10 @@ int main( int argc, char** argv )
         return;
     }
 
-    // Construction des histogrammes sur l'image originale
-    int i;
-    Histogram h5, h10, h15;
-    initHistogram(&h5, 5, 3);
-    initHistogram(&h10, 10, 3);
-    initHistogram(&h15, 15, 3);
+    // Construction de 3 histogrammes pour chaque blob
+    Blob* blob;
 
-    for(i = 0; i < blobs[0]->total; i++)
-    {
-        CvPoint* p = (CvPoint*)cvGetSeqElem(blobs[0], i);
-
-        updateHistogram(&h5, frameOrig, p->x, p->y);
-        updateHistogram(&h10, frameOrig, p->x, p->y);
-        updateHistogram(&h15, frameOrig, p->x, p->y);
-    }
-
-    writeHistogram(&h5, "hist_f1_5.cvs");
-    writeHistogram(&h10, "hist_f1_10.cvs");
-    writeHistogram(&h15, "hist_f1_15.cvs");
-
-    releaseHistogram(&h5);
-    releaseHistogram(&h10);
-    releaseHistogram(&h15);
-*/
-
-    freePointSeqs(storage);
+    cvReleaseMemStorage(&storage);
     cvReleaseImage(&frame);
+    cvReleaseImage(&frameOrig);
 }
