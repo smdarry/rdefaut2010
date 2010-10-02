@@ -178,8 +178,8 @@ void testOverlappingBlobsArea()
     b2.box.x = 2; b2.box.y = 3;
     b2.box.width = 3; b2.box.height = 2;
     
-    int area = percentOverlap(&b1, &b2);
-    printf("Expected: 2, Actual: %d\n", area);
+    float area = percentOverlap(&b1, &b2);
+    printf("Expected: 0.22, Actual: %.2f\n", area);
     
     
     b1.box.x = 1; b1.box.y = 1;
@@ -188,7 +188,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 1; b2.box.height = 3;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 0, Actual: %d\n", area);
+    printf("Expected: 0.00, Actual: %.2f\n", area);
     
     
     b1.box.x = 1; b1.box.y = 1;
@@ -197,7 +197,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 1; b2.box.height = 3;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 0, Actual: %d\n", area);
+    printf("Expected: 0.00, Actual: %.2f\n", area);
     
     
     b1.box.x = 1; b1.box.y = 1;
@@ -206,7 +206,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 2; b2.box.height = 2;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 2, Actual: %d\n", area);
+    printf("Expected: 0.25, Actual: %.2f\n", area);
     
     
     b1.box.x = 0; b1.box.y = 0;
@@ -215,7 +215,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 2; b2.box.height = 3;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 0, Actual: %d\n", area);
+    printf("Expected: 0.00, Actual: %.2f\n", area);
     
     
     b1.box.x = 0; b1.box.y = 0;
@@ -224,7 +224,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 2; b2.box.height = 3;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 3, Actual: %d\n", area);
+    printf("Expected: 0.50, Actual: %.2f\n", area);
     
     
     b1.box.x = 0; b1.box.y = 0;
@@ -233,7 +233,7 @@ void testOverlappingBlobsArea()
     b2.box.width = 2; b2.box.height = 3;
     
     area = percentOverlap(&b1, &b2);
-    printf("Expected: 6, Actual: %d\n", area);
+    printf("Expected: 1.00, Actual: %.2f\n", area);
 }
 
 void testAbsDiffHistograms()
@@ -276,6 +276,5 @@ int main( int argc, char** argv )
     
     testAbsDiffHistograms();
     
-    system("PAUSE");
     return 0;
 }
