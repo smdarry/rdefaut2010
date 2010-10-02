@@ -1,4 +1,7 @@
 #include <stdio.h>
+
+#include "blob.h"
+#include "histogram.h"
 #include "stats.h"
 #include "utils.h"
 
@@ -125,6 +128,140 @@ void testCvThreshold()
     cvReleaseImage(&image);
 }
 
+void testOverlappingBlobs()
+{
+    printf("\nTEST BLOB OVERLAPPING\n");
+    
+    Blob b1, b2;
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 3;
+    b2.box.width = 3; b2.box.height = 2;
+    
+    int overlap = areOverlapping(&b1, &b2);
+    printf("Expected: 1, Actual: %d\n", overlap);
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 3; b2.box.y = 1;
+    b2.box.width = 1; b2.box.height = 3;
+    
+    overlap = areOverlapping(&b1, &b2);
+    printf("Expected: 1, Actual: %d\n", overlap);
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 4; b2.box.y = 1;
+    b2.box.width = 1; b2.box.height = 3;
+    
+    overlap = areOverlapping(&b1, &b2);
+    printf("Expected: 0, Actual: %d\n", overlap);
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 5;
+    b2.box.width = 1; b2.box.height = 3;
+    
+    overlap = areOverlapping(&b1, &b2);
+    printf("Expected: 0, Actual: %d\n", overlap);
+}
+
+void testOverlappingBlobsArea()
+{
+    printf("\nTEST BLOB OVERLAPPING AREA\n");
+    
+    Blob b1, b2;
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 3;
+    b2.box.width = 3; b2.box.height = 2;
+    
+    int area = percentOverlap(&b1, &b2);
+    printf("Expected: 2, Actual: %d\n", area);
+    
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 5;
+    b2.box.width = 1; b2.box.height = 3;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 0, Actual: %d\n", area);
+    
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 3; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 5;
+    b2.box.width = 1; b2.box.height = 3;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 0, Actual: %d\n", area);
+    
+    
+    b1.box.x = 1; b1.box.y = 1;
+    b1.box.width = 4; b1.box.height = 2;
+    b2.box.x = 2; b2.box.y = 2;
+    b2.box.width = 2; b2.box.height = 2;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 2, Actual: %d\n", area);
+    
+    
+    b1.box.x = 0; b1.box.y = 0;
+    b1.box.width = 2; b1.box.height = 3;
+    b2.box.x = 2; b2.box.y = 0;
+    b2.box.width = 2; b2.box.height = 3;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 0, Actual: %d\n", area);
+    
+    
+    b1.box.x = 0; b1.box.y = 0;
+    b1.box.width = 2; b1.box.height = 3;
+    b2.box.x = 1; b2.box.y = 0;
+    b2.box.width = 2; b2.box.height = 3;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 3, Actual: %d\n", area);
+    
+    
+    b1.box.x = 0; b1.box.y = 0;
+    b1.box.width = 2; b1.box.height = 3;
+    b2.box.x = 0; b2.box.y = 0;
+    b2.box.width = 2; b2.box.height = 3;
+    
+    area = percentOverlap(&b1, &b2);
+    printf("Expected: 6, Actual: %d\n", area);
+}
+
+void testAbsDiffHistograms()
+{
+    printf("\nTEST HISTOGRAM DIFFERENCE\n");
+
+    // Construction d'histogrammes de test
+    int channel = 0;
+    Histogram h1;
+    initHistogram(&h1, 5, 3);
+    h1.freq[0][channel] = 12;
+    h1.freq[1][channel] = 15;
+    h1.freq[2][channel] = 20;
+    h1.freq[3][channel] = 45;
+    h1.freq[4][channel] = 19;
+    
+    Histogram h2;
+    initHistogram(&h2, 5, 3);
+    h2.freq[0][channel] = 3;
+    h2.freq[1][channel] = 17;
+    h2.freq[2][channel] = 19;
+    h2.freq[3][channel] = 70;
+    h2.freq[4][channel] = 16;
+
+    float sum = absDiffHistograms(&h1, &h2, channel);
+    printf("Expected: 40.00, Actual: %.2f\n", sum);
+}
+
 int main( int argc, char** argv )
 {
     testComputeMedian();
@@ -133,5 +270,12 @@ int main( int argc, char** argv )
     
     testComputeMeanSdv();
 
-    //testCvThreshold();
+    testOverlappingBlobs();
+    
+    testOverlappingBlobsArea();
+    
+    testAbsDiffHistograms();
+    
+    system("PAUSE");
+    return 0;
 }
