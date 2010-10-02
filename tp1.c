@@ -135,7 +135,7 @@ int main( int argc, char** argv )
     IplImage* forGauss = segmentGaussian(frame, 2.0, &gaussianModel);
     IplImage* forMean = segmentMean(frame, 50.0, &gaussianModel);
     IplImage* forPct = segmentPercentile(frame, &medianModel);
-    IplImage* forMedianStdDev = segmentMedianStdDev(frame, 2.0, &medianModel, &gaussianModel);
+    IplImage* forMedianStdDev = segmentMedianStdDev(frame, 2.0, &medianModel);
 
     cvSaveImage("Median.jpg", forMedian);
     cvSaveImage("Gaussian.jpg", forGauss);
