@@ -5,6 +5,8 @@
 
 typedef struct _blob
 {
+    int label;
+
     CvSeq* points;
     CvRect box;
 
@@ -112,7 +114,7 @@ float percentOverlap(Blob* b1, Blob* b2)
       return (xCoords[2] - xCoords[1]) * (yCoords[2] - yCoords[1]);
 }
 
-int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob* blobs)
+int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
 {    
     // Pre-Filtrage pour enlever les valeurs dues a la compression de l'image
     cvThreshold(binFrame, binFrame, 200, 255, CV_THRESH_BINARY);
@@ -124,11 +126,10 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob* blobs)
     int blobCount = etiquetage((uchar*)binFrame->imageData, 
                                (int**)&matEtiq->data.ptr, binFrame->width, 
                                binFrame->height);
-    printf("%d blobs trouves\n", blobCount);
     cvReleaseImage(&imgEtiq);
 
     // Allocation d'espace pour heberger les blobs
-    blobs = (Blob*)malloc(blobCount * sizeof(Blob));
+    Blob* newBlobs = (Blob*)malloc(blobCount * sizeof(Blob));
 
     // Separation des pixels de chaque blob dans des listes chainees
     CvSeq* blobPoints[blobCount];
@@ -157,21 +158,35 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob* blobs)
     // Assigne la liste de points au blob correspondant
     int b;
     for(b = 0; b < blobCount; b++)
-        blobs[b].points = blobPoints[b];
+    {
+        newBlobs[b].label = b + 1;
+        newBlobs[b].points = blobPoints[b];
+    }
 
     // Calcul des boites englobantes
     for(b = 0; b < blobCount; b++)
     {
-        Blob blob = blobs[b];
-        boundingBox(&blob);
+        boundingBox(&newBlobs[b]);
+    }
+
+    *blobs = newBlobs;
+
+    return blobCount;
+}
+
+void drawBoundingRects(IplImage* binFrame, Blob* blobs, int blobCount)
+{
+    Blob* blob;
+    int b;
+    for(b = 0; b < blobCount; b++)
+    {
+        blob = &blobs[b];
+        boundingBox(blob);
 
         // Affichage des boites
-        CvPoint p1 = cvPoint(blob.box.x, blob.box.y);
-        CvPoint p2 = cvPoint(blob.box.x + blob.box.width, blob.box.y + blob.box.height);
+        CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
+        CvPoint p2 = cvPoint(blob->box.x + blob->box.width, blob->box.y + blob->box.height);
 
         cvRectangle(binFrame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
     }
-    cvSaveImage("blobsImage.jpg", binFrame, NULL);
-    
-    return blobCount;
 }
