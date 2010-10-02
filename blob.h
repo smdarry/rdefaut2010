@@ -158,7 +158,6 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
         }
     }
 
-
     // Assigne la liste de points au blob correspondant
     int b;
     for(b = 0; b < blobCount; b++)
@@ -199,5 +198,22 @@ void drawBoundingRects(IplImage* binFrame, Blob* blobs, int blobCount)
         CvPoint p2 = cvPoint(blob->box.x + blob->box.width, blob->box.y + blob->box.height);
 
         cvRectangle(binFrame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+    }
+}
+
+void buildHistograms(Blob* blob, IplImage* frame)
+{
+    initHistogram(&blob->h5, 5, 3);
+    initHistogram(&blob->h10, 10, 3);
+    initHistogram(&blob->h15, 15, 3);
+
+    int i;
+    for(i = 0; i < blob->points->total; i++)
+    {
+        CvPoint* p = (CvPoint*)cvGetSeqElem(blob->points, i);
+
+        updateHistogram(&blob->h5, frame, p->x, p->y);
+        updateHistogram(&blob->h10, frame, p->x, p->y);
+        updateHistogram(&blob->h15, frame, p->x, p->y);
     }
 }
