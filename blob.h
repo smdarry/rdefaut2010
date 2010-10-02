@@ -92,22 +92,28 @@ int cmpCoords(const void *c1, const void *c2)
 
 float percentOverlap(Blob* b1, Blob* b2)
 {
-      // Se chevauchent-ils?
-      if(!areOverlapping(b1, b2))
-      {
-          return 0.0;
-      }
+    // Se chevauchent-ils?
+    if(!areOverlapping(b1, b2))
+    {
+        return 0.0;
+    }
       
-      // Tri des X
-      int xCoords[] = {b1->box.x, b1->box.x + b1->box.width, b2->box.x, b2->box.x + b2->box.width };
-      qsort(xCoords, 4, sizeof(int), cmpCoords);
+    // Tri des X
+    int xCoords[] = {b1->box.x, b1->box.x + b1->box.width, b2->box.x, b2->box.x + b2->box.width };
+    qsort(xCoords, 4, sizeof(int), cmpCoords);
       
-      // Tri des Y
-      int yCoords[] = {b1->box.y, b1->box.y + b1->box.height, b2->box.y, b2->box.y + b2->box.height };
-      qsort(yCoords, 4, sizeof(int), cmpCoords);
+    // Tri des Y
+    int yCoords[] = {b1->box.y, b1->box.y + b1->box.height, b2->box.y, b2->box.y + b2->box.height };
+    qsort(yCoords, 4, sizeof(int), cmpCoords);
       
-      // Determination de l'aire en utilisant les coordonnees du centre
-      return (xCoords[2] - xCoords[1]) * (yCoords[2] - yCoords[1]);
+    // Determination de l'aire en commun
+    float intArea = (xCoords[2] - xCoords[1]) * (yCoords[2] - yCoords[1]);
+
+    // Aire du premier blob
+    float b1Area = b1->box.height * b1->box.width;
+
+    // Pourcentage de l'aire du premier blob couvert par le second
+    return (intArea / b1Area);
 }
 
 int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
