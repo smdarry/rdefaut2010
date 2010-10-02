@@ -131,9 +131,6 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
                                binFrame->height);
     cvReleaseImage(&imgEtiq);
 
-    // Allocation d'espace pour heberger les blobs
-    Blob* newBlobs = (Blob*)malloc(blobCount * sizeof(Blob));
-
     // Separation des pixels de chaque blob dans des listes chainees
     CvSeq* blobPoints[blobCount];
     CvMemStorage* storage = cvCreateMemStorage(0);
@@ -158,24 +155,38 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
         }
     }
 
-    // Assigne la liste de points au blob correspondant
-    int b;
+    // On ne garde que les "gros" blobs (+ de 1000 points)
+    CvSeq* bigBlobPoints[blobCount];
+    int b, bigBlobCount = 0;
+    CvSeq* points;
     for(b = 0; b < blobCount; b++)
     {
+        points = blobPoints[b];
+        if(points->total > 1000)
+        {
+            bigBlobPoints[bigBlobCount++] = points;
+        }
+    }
+
+    // Allocation d'espace pour heberger les blobs
+    Blob* newBlobs = (Blob*)malloc(bigBlobCount * sizeof(Blob));
+
+    // Assigne la liste de points au blob correspondant
+    for(b = 0; b < bigBlobCount; b++)
+    {
         newBlobs[b].label = b + 1;
-        newBlobs[b].points = blobPoints[b];
+        newBlobs[b].points = bigBlobPoints[b];
         newBlobs[b].storage = storage;
     }
 
     // Calcul des boites englobantes
-    for(b = 0; b < blobCount; b++)
+    for(b = 0; b < bigBlobCount; b++)
     {
         boundingBox(&newBlobs[b]);
     }
-
     *blobs = newBlobs;
 
-    return blobCount;
+    return bigBlobCount;
 }
 
 void releaseBlobs(Blob* blobs)
