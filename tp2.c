@@ -1,92 +1,143 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "cv.h"
 #include "highgui.h"
-#include "etiquette.h"
-#include "histogram.h"
+
 #include "blob.h"
+#include "models.h"
+#include "utils.h"
 
-#include <stdio.h>
+#define IMAGE_COUNT 795
 
-int main( int argc, char** argv )
+void writeDistanceMatrix(CvMat* mat)
 {
-    const char* frameName = "../resultat.jpg";
-    IplImage* frame = cvLoadImage(frameName, 0);
-    if(frame == NULL)
-    {
-        fprintf(stderr, "Erreur de lecture de l'image %s\n", frameName);
-        return;
-    }
-
-    // Filtrage pour enlever les valeurs dues a la compression de l'image
-    cvThreshold(frame, frame, 200, 255, CV_THRESH_BINARY);
-
-    // Extraction des blobs
-    CvMat* matEtiq = cvCreateMatHeader(frame->height, frame->width, CV_32SC1);
-    IplImage *imgEtiq = cvCreateImage(cvGetSize(frame), IPL_DEPTH_8U, 1);
-
-    int blobCount = etiquetage((uchar*)frame->imageData, 
-                               (int**)&matEtiq->data.ptr, frame->width, 
-                               frame->height);
-    printf("%d blobs trouves\n", blobCount);
-    cvReleaseImage(&imgEtiq);
-
-    Blob blobs[blobCount];
-
-    // Separation des pixels de chaque blob dans des listes chainees
-    CvSeq* blobPoints[blobCount];
-    CvMemStorage* storage = cvCreateMemStorage(0);
-
-    initPointSeqs(blobPoints, blobCount, storage);
+    FILE* fp = fopen("distanceMatrix.csv", "w+");
     
-    CvPoint* p;
-    int row, col, label;
-    for(row = 0 ; row < matEtiq->rows; row++)
+    float f;
+    int row,col,step = mat->step;
+    for(row = 0; row < mat->rows; row++)
     {
-        for(col = 0; col < matEtiq->cols; col++)
+        for(col = 0; col < mat->cols; col++)
         {
-            label = ((int*)(matEtiq->data.i + matEtiq->cols*row))[col];
-            if(label > 0)
-            {
-                // Ajoute un point dans la bonne liste
-                p = (CvPoint*)malloc(sizeof(CvPoint));
-                p->x = col; p->y = row;
-
-                cvSeqPush(blobPoints[label-1], p);
-            }
+            f = ((float*)(mat->data.ptr + row*step))[col];
+            fprintf(fp, "%.2f,", f);
         }
+        f = ((float*)(mat->data.ptr + row*step))[col];
+        fprintf(fp, "%.2f\n", f);
     }
 
-    // Assigne la liste de points au blob correspondant
-    int b;
-    for(b = 0; b < blobCount; b++)
-        blobs[b].points = blobPoints[b];
+    fclose(fp);
+}
 
-    // Calcul des boites englobantes
-    for(b = 0; b < blobCount; b++)
+void playLoop(IplImage* frameBuffer[], int frameCount)
+{
+    Blob* pBlobs = NULL;
+    int pBlobCount = 0;
+
+    /////////////////////////////////////////// 
+    // Etape 1: construction du modele de fond
+    MedianModel medianModel;
+
+    // Apprentissage du modele
+    learnMedianModel(&medianModel, frameBuffer, frameCount, 0.95);
+    
+    char filename[255];
+    int i, pb, b;
+    IplImage* frame = NULL, *segFrame = NULL;
+    for(i = 0; i < frameCount; i++)
     {
-        Blob blob = blobs[b];
-        boundingBox(&blob);
+        frame = frameBuffer[i];
+        
+        ////////////////////////////////////////////
+        // Etape 2: segmentation utilisant un modele
+         
+        segFrame = segmentMedianStdDev(frame, 2.0, &medianModel);
+        
+        opening(segFrame, segFrame, 3);
+        closing(segFrame, segFrame, 3);
+        
 
-        // Affichage des boites
-        CvPoint p1 = cvPoint(blob.box.x, blob.box.y);
-        CvPoint p2 = cvPoint(blob.box.x + blob.box.width, blob.box.y + blob.box.height);
+        ///////////////////////////////////////////////////////////
+        // Etape 3: extraction des blobs et de leur caracteristiques
+        
+        Blob* blobs;
 
-        cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+        // Extraction des blobs
+        int blobCount = extractBlobs(segFrame, frame, &blobs);
+    
+        drawBoundingRects(segFrame, blobs, blobCount);
+        sprintf(filename, "bbox_%04d.jpg", i);
+        cvSaveImage(filename, segFrame);
+
+        // Calcul des histogrammes pour chaque blob
+        for(b = 0; b < blobCount; b++)
+        {
+            buildHistograms(&blobs[b], frame);
+        }
+    
+        if(pBlobs != NULL)
+        {
+            printf("Previous count: %d\n", pBlobCount);
+            printf("Current count: %d\n", blobCount);
+
+            // Matrice des combinaisons de recouvrements spatiaux
+            CvMat* mSpatial = cvCreateMat(pBlobCount, blobCount, CV_32FC1);
+
+            // Matrices des differences d'histogramme
+            CvMat* mHist5 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
+            CvMat* mHist10 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
+            CvMat* mHist15 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
+
+            float coverage, absDiff;
+            Blob *b1, *b2;
+            int step = mSpatial->step, hstep = mHist5->step;
+            for(pb = 0; pb < pBlobCount; pb++)
+            {
+                for(b = 0; b < blobCount; b++)
+                {
+                    b1 = &pBlobs[pb];
+                    b2 = &blobs[b];
+
+                    coverage = percentOverlap(b1, b2);
+                    ((float*)(mSpatial->data.ptr + pb*step))[b] = coverage;
+
+                    absDiff = absDiffHistograms(&b1->h5, &b2->h5, 0);
+                    ((float*)(mHist5->data.ptr + pb*hstep))[b*3] = absDiff;
+
+                    absDiff = absDiffHistograms(&b1->h10, &b2->h10, 0);
+                    ((float*)(mHist10->data.ptr + pb*hstep))[b*3] = absDiff;
+
+                    absDiff = absDiffHistograms(&b1->h15, &b2->h15, 0);
+                    ((float*)(mHist15->data.ptr + pb*hstep))[b*3] = absDiff;
+
+                    // TODO: Faire les autres canaux
+                }
+            }
+            writeDistanceMatrix(mSpatial);
+        }
+
+        pBlobCount = blobCount;
+        pBlobs = blobs;
+
+
+        //////////////////////////////////////////////////////////
+        // Etape 4: association temporelle avec le frame precedent
+        
     }
-    cvSaveImage("blobsImage.jpg", frame);
+}
 
-    // Charge la frame originale (couleur) pour calculer l'histogramme
-    const char* frameOrigName = "../View_008/frame_0061.jpg";
-    IplImage* frameOrig = cvLoadImage(frameOrigName, CV_LOAD_IMAGE_COLOR);
-    if(frameOrig == NULL)
-    {
-        fprintf(stderr, "Erreur de lecture de l'image %s\n", frameOrigName);
-        return;
-    }
+int main(int argc, char *argv[])
+{    
+    // Prend un echantillon d'images
+    int frameCount = 296 - 189 + 1;
+    IplImage* frameBuffer[frameCount];
 
-    // Construction de 3 histogrammes pour chaque blob
-    Blob* blob;
+    //selectFrames("../View_008", frameBuffer, frameCount, 1);
+    pickFrames("../View_008", frameBuffer, 189, 296);
 
-    cvReleaseMemStorage(&storage);
-    cvReleaseImage(&frame);
-    cvReleaseImage(&frameOrig);
+    // On fait rouler la machine
+    playLoop(frameBuffer, frameCount);
+    
+    return 0;
 }
