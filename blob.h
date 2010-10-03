@@ -127,7 +127,7 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     IplImage *imgEtiq = cvCreateImage(cvGetSize(binFrame), IPL_DEPTH_8U, 1);
 
     int blobCount = etiquetage((uchar*)binFrame->imageData, 
-                               (int**)&matEtiq->data.ptr, binFrame->width, 
+                               (int**)&matEtiq->data.i, binFrame->width, 
                                binFrame->height);
     cvReleaseImage(&imgEtiq);
 
@@ -195,7 +195,7 @@ void releaseBlobs(Blob* blobs)
     free(blobs);
 }
 
-void drawBoundingRects(IplImage* binFrame, Blob* blobs, int blobCount)
+void drawBoundingRects(IplImage* frame, Blob* blobs, int blobCount)
 {
     Blob* blob;
     int b;
@@ -208,7 +208,30 @@ void drawBoundingRects(IplImage* binFrame, Blob* blobs, int blobCount)
         CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
         CvPoint p2 = cvPoint(blob->box.x + blob->box.width, blob->box.y + blob->box.height);
 
-        cvRectangle(binFrame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+        cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+    }
+}
+
+void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
+{
+    Blob* blob;
+    char label[255];
+
+    int b;
+    for(b = 0; b < blobCount; b++)
+    {
+        blob = &blobs[b];
+
+        CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
+
+        sprintf(label, "Person %d", blob->label);
+
+        printf("label = %s\n", label);
+
+        // Affichage d'un etiquette sur chaque boite
+        CvFont font;
+        cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA);
+        cvPutText(frame, label, p1, &font, cvScalar(255, 255, 255, 0));
     }
 }
 
