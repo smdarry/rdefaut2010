@@ -226,9 +226,7 @@ void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
 
         sprintf(label, "Person %d", blob->label);
 
-        printf("label = %s\n", label);
-
-        // Affichage d'un etiquette sur chaque boite
+        // Affichage d'une etiquette sur chaque boite
         CvFont font;
         cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA);
         cvPutText(frame, label, p1, &font, cvScalar(255, 255, 255, 0));
