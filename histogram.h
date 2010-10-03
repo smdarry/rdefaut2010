@@ -9,7 +9,7 @@ typedef struct _histogram
     int channels;
     int bins;
     float binWidth;
-    int** freq;
+    double** freq;
 } Histogram;
 
 void initHistogram(Histogram* h, int bins, int channels)
@@ -17,11 +17,15 @@ void initHistogram(Histogram* h, int bins, int channels)
     h->channels = channels;
     h->bins = bins;
     h->binWidth = 256.0 / bins;
-    h->freq = (int**)malloc(bins*sizeof(int*));
+    h->freq = (double**)malloc(bins*sizeof(double*));
 
-    int i;
+    int i,c;
     for(i = 0; i < bins; i++)
-        h->freq[i] = calloc(channels, sizeof(int));
+    {
+        h->freq[i] = malloc(channels*sizeof(double));
+        for(c = 0; c < channels; c++)
+            h->freq[i][c] = 0.0;
+    }
 }
 
 void releaseHistogram(Histogram* h)
@@ -49,6 +53,28 @@ void updateHistogram(Histogram* h, IplImage* frame, int x, int y)
     h->freq[binBlue][0]++;
     h->freq[binGreen][1]++;
     h->freq[binRed][2]++;
+}
+
+void normalizeHistogram(Histogram* h)
+{
+    double sumBlue = 0.0, sumGreen = 0.0, sumRed = 0.0;
+
+    // Effectue la somme des frequences
+    int b;
+    for(b = 0; b < h->bins; b++)
+    {
+        sumBlue += h->freq[b][0];
+        sumGreen += h->freq[b][1];
+        sumRed += h->freq[b][2];
+    }
+
+    // Puis divise chaque bin par la somme
+    for(b = 0; b < h->bins; b++)
+    {
+        h->freq[b][0] /= sumBlue;
+        h->freq[b][1] /= sumGreen;
+        h->freq[b][2] /= sumRed;
+    }
 }
 
 void writeHistogram(Histogram* h, char* filename)
