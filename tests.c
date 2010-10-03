@@ -244,23 +244,105 @@ void testAbsDiffHistograms()
     int channel = 0;
     Histogram h1;
     initHistogram(&h1, 5, 3);
-    h1.freq[0][channel] = 12;
-    h1.freq[1][channel] = 15;
-    h1.freq[2][channel] = 20;
-    h1.freq[3][channel] = 45;
-    h1.freq[4][channel] = 19;
+    h1.freq[0][channel] = 12;   // 0.11
+    h1.freq[1][channel] = 15;   // 0.14
+    h1.freq[2][channel] = 20;   // 0.18
+    h1.freq[3][channel] = 45;   // 0.41
+    h1.freq[4][channel] = 19;   // 0.17
     
     Histogram h2;
     initHistogram(&h2, 5, 3);
-    h2.freq[0][channel] = 3;
-    h2.freq[1][channel] = 17;
-    h2.freq[2][channel] = 19;
-    h2.freq[3][channel] = 70;
-    h2.freq[4][channel] = 16;
+    h2.freq[0][channel] = 3;    // 0.02
+    h2.freq[1][channel] = 17;   // 0.14
+    h2.freq[2][channel] = 19;   // 0.15
+    h2.freq[3][channel] = 70;   // 0.56
+    h2.freq[4][channel] = 16;   // 0.13
 
     float sum = absDiffHistograms(&h1, &h2, channel);
     printf("Expected: 40.00, Actual: %.2f\n", sum);
+
+    // Avec histogrammes normalises
+    normalizeHistogram(&h1);
+    normalizeHistogram(&h2);
+
+    sum = absDiffHistograms(&h1, &h2, channel);
+    printf("Expected: 0.31, Actual: %.2f\n", sum);
+
+
+    // Test 2: histogrammes identiques
+    //
+    h1.freq[0][channel] = 12;   // 0.11
+    h1.freq[1][channel] = 15;   // 0.14
+    h1.freq[2][channel] = 20;   // 0.18
+    h1.freq[3][channel] = 45;   // 0.41
+    h1.freq[4][channel] = 19;   // 0.17
+
+    h2.freq[0][channel] = 12;   // 0.11
+    h2.freq[1][channel] = 15;   // 0.14
+    h2.freq[2][channel] = 20;   // 0.18
+    h2.freq[3][channel] = 45;   // 0.41
+    h2.freq[4][channel] = 19;   // 0.17
+
+    normalizeHistogram(&h1);
+    normalizeHistogram(&h2);
+
+    sum = absDiffHistograms(&h1, &h2, channel);
+    printf("Expected: 0.00, Actual: %.2f\n", sum);
+
+
+    // Test 3: histogrammes disjoints completement
+    //
+    h1.freq[0][channel] = 0;   // 0.00
+    h1.freq[1][channel] = 0;   // 0.00
+    h1.freq[2][channel] = 0;   // 0.00
+    h1.freq[3][channel] = 45;  // 0.70
+    h1.freq[4][channel] = 19;  // 0.30
+
+    h2.freq[0][channel] = 23;  // 0.56
+    h2.freq[1][channel] = 15;  // 0.37
+    h2.freq[2][channel] = 3;   // 0.07
+    h2.freq[3][channel] = 0;   // 0.00
+    h2.freq[4][channel] = 0;   // 0.00
+
+    normalizeHistogram(&h1);
+    normalizeHistogram(&h2);
+
+    sum = absDiffHistograms(&h1, &h2, channel);
+    printf("Expected: 2.00, Actual: %.2f\n", sum);
 }
+
+void testNormalizeHistogram()
+{
+    printf("\nTEST NORMALIZE HISTOGRAM\n");
+
+    Histogram h1;
+    initHistogram(&h1, 5, 3);
+    h1.freq[0][0] = 12;
+    h1.freq[1][0] = 15;
+    h1.freq[2][0] = 20;
+    h1.freq[3][0] = 45;
+    h1.freq[4][0] = 19;
+
+    h1.freq[0][1] = 5;
+    h1.freq[1][1] = 7;
+    h1.freq[2][1] = 16;
+    h1.freq[3][1] = 6;
+    h1.freq[4][1] = 4;
+
+    normalizeHistogram(&h1);
+    printf("Expected: 0.11, Actual: %.2f\n", h1.freq[0][0]);
+    printf("Expected: 0.14, Actual: %.2f\n", h1.freq[1][0]);
+    printf("Expected: 0.18, Actual: %.2f\n", h1.freq[2][0]);
+    printf("Expected: 0.41, Actual: %.2f\n", h1.freq[3][0]);
+    printf("Expected: 0.17, Actual: %.2f\n", h1.freq[4][0]);
+
+    printf("Expected: 0.13, Actual: %.2f\n", h1.freq[0][1]);
+    printf("Expected: 0.18, Actual: %.2f\n", h1.freq[1][1]);
+    printf("Expected: 0.42, Actual: %.2f\n", h1.freq[2][1]);
+    printf("Expected: 0.16, Actual: %.2f\n", h1.freq[3][1]);
+    printf("Expected: 0.11, Actual: %.2f\n", h1.freq[4][1]);
+}
+
 
 int main( int argc, char** argv )
 {
@@ -275,6 +357,8 @@ int main( int argc, char** argv )
     testOverlappingBlobsArea();
     
     testAbsDiffHistograms();
+
+    testNormalizeHistogram();
     
     return 0;
 }
