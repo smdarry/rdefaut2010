@@ -10,6 +10,14 @@
 
 #define IMAGE_COUNT 795
 
+typedef struct _metrics
+{
+    CvMat* mSpatial;
+    CvMat* mHist5;
+    CvMat* mHist10;
+    CvMat* mHist15;
+} DistMetrics;
+
 void writeDistanceMatrix(CvMat* mat)
 {
     FILE* fp = fopen("distanceMatrix.csv", "w+");
@@ -29,6 +37,67 @@ void writeDistanceMatrix(CvMat* mat)
 
     fclose(fp);
 }
+
+int generateLabel()
+{
+    static int nextLabel = 0;
+    return nextLabel++;
+}
+
+void association(Blob* blobs, Blob* pBlobs, DistMetrics* m, int assocMatrix[])
+{
+    float maxCoverage = 0.0, coverage, absDiff, absDiffMin = 1.0;
+    float score, maxScore = 0.0;
+    int maxScoreCol = -1;
+
+    uchar* datam = m->mSpatial->data.ptr;
+    int stepm = m->mSpatial->step;
+
+    uchar* datad = m->mHist5->data.ptr;
+    int stepd = m->mHist5->step;
+
+    int b, pb;
+    for(b = 0; b < m->mSpatial->rows; b++)
+    {
+        for(pb = 0; pb < m->mSpatial->cols; pb++)
+        {
+            coverage = ((float*)(datam + stepm*b))[pb];
+            absDiff = ((float*)(datad + stepd*b))[pb*3];
+
+            printf("Coverage = %.2f\n", coverage);
+            printf("Abs diff = %.2f\n", absDiff);
+
+            score = coverage * (2.0 - absDiff);
+            if(score > maxScore)
+            {
+                maxScore = score;
+                maxScoreCol = pb;
+            }
+
+            printf("Score for (%d,%d) = %.2f\n", b, pb, score);
+        }
+        assocMatrix[b] = maxScoreCol;
+    }
+}
+
+/*
+        // Cas 1: maxScore == 0 => nouveau blob
+        // Cas 2: maxScore > 0 => association
+        if(maxScore == 0.0)
+        {
+            // Assigne un nouveau label
+            blobs[b].label = generateLabel();
+        }
+        else
+        {
+            // Accepte le label du meilleur match
+            blobs[b].label = pBlobs[maxScoreCol].label;
+        }
+
+        // cas 3: blob disparait
+    }
+}
+*/
 
 void playLoop(IplImage* frameBuffer[], int frameCount)
 {
@@ -62,11 +131,14 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         // Etape 3: extraction des blobs et de leur caracteristiques
         
         Blob* blobs;
+        DistMetrics m;
 
         // Extraction des blobs
         int blobCount = extractBlobs(segFrame, frame, &blobs);
     
         drawBoundingRects(segFrame, blobs, blobCount);
+        drawLabels(segFrame, blobs, blobCount);
+
         sprintf(filename, "bbox_%04d.jpg", i);
         cvSaveImage(filename, segFrame);
 
@@ -74,56 +146,67 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         for(b = 0; b < blobCount; b++)
         {
             buildHistograms(&blobs[b], frame);
+
+            normalizeHistogram(&blobs[b].h5);
+            normalizeHistogram(&blobs[b].h10);
+            normalizeHistogram(&blobs[b].h15);
         }
     
         if(pBlobs != NULL)
         {
-            printf("Previous count: %d\n", pBlobCount);
-            printf("Current count: %d\n", blobCount);
-
             // Matrice des combinaisons de recouvrements spatiaux
-            CvMat* mSpatial = cvCreateMat(pBlobCount, blobCount, CV_32FC1);
+            m.mSpatial = cvCreateMat(blobCount, pBlobCount, CV_32FC1);
 
             // Matrices des differences d'histogramme
-            CvMat* mHist5 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
-            CvMat* mHist10 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
-            CvMat* mHist15 = cvCreateMat(pBlobCount, blobCount, CV_32FC3);
+            m.mHist5 = cvCreateMat(blobCount, pBlobCount, CV_32FC3);
+            m.mHist10 = cvCreateMat(blobCount, pBlobCount, CV_32FC3);
+            m.mHist15 = cvCreateMat(blobCount, pBlobCount, CV_32FC3);
 
             float coverage, absDiff;
             Blob *b1, *b2;
-            int step = mSpatial->step, hstep = mHist5->step;
-            for(pb = 0; pb < pBlobCount; pb++)
+            int step = m.mSpatial->step, hstep = m.mHist5->step;
+            for(b = 0; b < blobCount; b++)
             {
-                for(b = 0; b < blobCount; b++)
+                for(pb = 0; pb < pBlobCount; pb++)
                 {
-                    b1 = &pBlobs[pb];
-                    b2 = &blobs[b];
+                    b1 = &blobs[b];
+                    b2 = &pBlobs[pb];
 
                     coverage = percentOverlap(b1, b2);
-                    ((float*)(mSpatial->data.ptr + pb*step))[b] = coverage;
+                    ((float*)(m.mSpatial->data.ptr + b*step))[pb] = coverage;
 
                     absDiff = absDiffHistograms(&b1->h5, &b2->h5, 0);
-                    ((float*)(mHist5->data.ptr + pb*hstep))[b*3] = absDiff;
+                    ((float*)(m.mHist5->data.ptr + b*hstep))[pb*3] = absDiff;
 
                     absDiff = absDiffHistograms(&b1->h10, &b2->h10, 0);
-                    ((float*)(mHist10->data.ptr + pb*hstep))[b*3] = absDiff;
+                    ((float*)(m.mHist10->data.ptr + b*hstep))[pb*3] = absDiff;
 
                     absDiff = absDiffHistograms(&b1->h15, &b2->h15, 0);
-                    ((float*)(mHist15->data.ptr + pb*hstep))[b*3] = absDiff;
+                    ((float*)(m.mHist15->data.ptr + b*hstep))[pb*3] = absDiff;
 
                     // TODO: Faire les autres canaux
                 }
             }
-            writeDistanceMatrix(mSpatial);
+
+
+            //////////////////////////////////////////////////////////
+            // Etape 4: association temporelle avec le frame precedent
+            int assocMatrix[blobCount];
+            association(blobs, pBlobs, &m, assocMatrix);
+
+            // Print association matrix
+            //for(b = 0; b < blobCount; b++)
+            //    printf("%d <--> %d\n", b, assocMatrix[b]);
+        }
+        else
+        {
+            // Attribution d'une etiquette a chaque blob
+            for(b = 0; b < blobCount; b++)
+                blobs[b].label = generateLabel();
         }
 
         pBlobCount = blobCount;
         pBlobs = blobs;
-
-
-        //////////////////////////////////////////////////////////
-        // Etape 4: association temporelle avec le frame precedent
-        
     }
 }
 
