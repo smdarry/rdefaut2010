@@ -40,7 +40,7 @@ void writeDistanceMatrix(CvMat* mat)
 
 int generateLabel()
 {
-    static int nextLabel = 0;
+    static int nextLabel = 1;
     return nextLabel++;
 }
 
@@ -49,6 +49,17 @@ void association(Blob* blobs, Blob* pBlobs, DistMetrics* m, int assocMatrix[])
     float maxCoverage = 0.0, coverage, absDiff, absDiffMin = 1.0;
     float score, maxScore = 0.0;
     int maxScoreCol = -1;
+
+    // Ceci est necessaire pour eviter les associations multiples
+    int i;
+    float maxScores[m->mSpatial->cols];
+    for(i = 0; i < m->mSpatial->cols; i++)
+        maxScores[i] = 0.0;
+
+    // Initialisation de la matrice d'association
+    // un -1 signifie aucune association faite
+    for(i = 0; i < m->mSpatial->rows; i++)
+        assocMatrix[i] = -1;
 
     uchar* datam = m->mSpatial->data.ptr;
     int stepm = m->mSpatial->step;
@@ -64,19 +75,20 @@ void association(Blob* blobs, Blob* pBlobs, DistMetrics* m, int assocMatrix[])
             coverage = ((float*)(datam + stepm*b))[pb];
             absDiff = ((float*)(datad + stepd*b))[pb*3];
 
-            printf("Coverage = %.2f\n", coverage);
-            printf("Abs diff = %.2f\n", absDiff);
-
-            score = coverage * (2.0 - absDiff);
+            score = coverage * (1.0 - absDiff / 2.0);
             if(score > maxScore)
             {
                 maxScore = score;
                 maxScoreCol = pb;
             }
-
-            printf("Score for (%d,%d) = %.2f\n", b, pb, score);
         }
-        assocMatrix[b] = maxScoreCol;
+
+        if(maxScore > maxScores[maxScoreCol])
+        {
+            maxScores[b] = maxScore;
+            assocMatrix[b] = maxScoreCol;
+        }
+        maxScore = 0.0;
     }
 }
 
@@ -114,7 +126,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
     char filename[255];
     int i, pb, b;
     IplImage* frame = NULL, *segFrame = NULL;
-    for(i = 0; i < frameCount; i++)
+    for(i = 6; i < 8/*frameCount*/; i++)
     {
         frame = frameBuffer[i];
         
@@ -136,12 +148,6 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         // Extraction des blobs
         int blobCount = extractBlobs(segFrame, frame, &blobs);
     
-        drawBoundingRects(segFrame, blobs, blobCount);
-        drawLabels(segFrame, blobs, blobCount);
-
-        sprintf(filename, "bbox_%04d.jpg", i);
-        cvSaveImage(filename, segFrame);
-
         // Calcul des histogrammes pour chaque blob
         for(b = 0; b < blobCount; b++)
         {
@@ -151,7 +157,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
             normalizeHistogram(&blobs[b].h10);
             normalizeHistogram(&blobs[b].h15);
         }
-    
+
         if(pBlobs != NULL)
         {
             // Matrice des combinaisons de recouvrements spatiaux
@@ -195,15 +201,31 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
             association(blobs, pBlobs, &m, assocMatrix);
 
             // Print association matrix
-            //for(b = 0; b < blobCount; b++)
-            //    printf("%d <--> %d\n", b, assocMatrix[b]);
+            for(b = 0; b < blobCount; b++)
+                printf("%d <--> %d\n", b, assocMatrix[b]);
+
+            // Transfer des identites (etiquettes) aux nouveaux blobs
+            for(b = 0; b < blobCount; b++)
+            {
+                int index = assocMatrix[b];
+                if(index != -1)
+                    blobs[b].label = pBlobs[index].label;
+                else
+                    blobs[b].label = generateLabel();
+            }
         }
         else
         {
-            // Attribution d'une etiquette a chaque blob
+            // Attribution d'une premiere etiquette a chaque blob
             for(b = 0; b < blobCount; b++)
                 blobs[b].label = generateLabel();
         }
+
+        drawBoundingRects(segFrame, blobs, blobCount);
+        drawLabels(segFrame, blobs, blobCount);
+
+        sprintf(filename, "bbox_%04d.jpg", i);
+        cvSaveImage(filename, segFrame);
 
         pBlobCount = blobCount;
         pBlobs = blobs;
