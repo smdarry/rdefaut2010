@@ -163,6 +163,9 @@ int main( int argc, char** argv )
 
     cvSaveImage("Mean1.jpg", forMean1);
     cvSaveImage("Mean2.jpg", forMean2);
+    
+    cvSaveImage("MeanImage.jpg", gaussianModel.mean);
+    cvSaveImage("AdaptiveMeanImage.jpg", adaptiveGaussianModel.mean);
 
     releaseGaussianModel(&adaptiveGaussianModel);
     releaseGaussianModel(&gaussianModel);
