@@ -16,7 +16,7 @@ typedef struct _blob
     Histogram h10;
     Histogram h15;
 } Blob;
- 
+
 void initPointSeqs(CvSeq* seqs[], int length, CvMemStorage* storage)
 {
     int i;
@@ -174,7 +174,7 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     // Assigne la liste de points au blob correspondant
     for(b = 0; b < bigBlobCount; b++)
     {
-        newBlobs[b].label = b + 1;
+        newBlobs[b].label = -10;
         newBlobs[b].points = bigBlobPoints[b];
         newBlobs[b].storage = storage;
     }
@@ -224,7 +224,7 @@ void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
 
         CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
 
-        sprintf(label, "Person %d", blob->label);
+        sprintf(label, "P%02d", blob->label);
 
         // Affichage d'une etiquette sur chaque boite
         CvFont font;
