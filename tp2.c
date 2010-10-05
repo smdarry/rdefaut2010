@@ -75,41 +75,24 @@ void association(Blob* blobs, Blob* pBlobs, DistMetrics* m, int assocMatrix[])
             coverage = ((float*)(datam + stepm*b))[pb];
             absDiff = ((float*)(datad + stepd*b))[pb*3];
 
-            score = coverage * (1.0 - absDiff / 2.0);
+            score = coverage * (1.0 - (absDiff / 2.0));
             if(score > maxScore)
             {
                 maxScore = score;
                 maxScoreCol = pb;
             }
+
+            printf("[%d,%d] <--> [%d,%d]: %.2f\n", blobs[b].box.x, blobs[b].box.y, pBlobs[pb].box.x, pBlobs[pb].box.y, score);
         }
 
         if(maxScore > maxScores[maxScoreCol])
         {
-            maxScores[b] = maxScore;
+            maxScores[maxScoreCol] = maxScore;
             assocMatrix[b] = maxScoreCol;
         }
         maxScore = 0.0;
     }
 }
-
-/*
-        // Cas 1: maxScore == 0 => nouveau blob
-        // Cas 2: maxScore > 0 => association
-        if(maxScore == 0.0)
-        {
-            // Assigne un nouveau label
-            blobs[b].label = generateLabel();
-        }
-        else
-        {
-            // Accepte le label du meilleur match
-            blobs[b].label = pBlobs[maxScoreCol].label;
-        }
-
-        // cas 3: blob disparait
-    }
-}
-*/
 
 void playLoop(IplImage* frameBuffer[], int frameCount)
 {
@@ -126,7 +109,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
     char filename[255];
     int i, pb, b;
     IplImage* frame = NULL, *segFrame = NULL;
-    for(i = 6; i < 8/*frameCount*/; i++)
+    for(i = 0; i < frameCount; i++)
     {
         frame = frameBuffer[i];
         
