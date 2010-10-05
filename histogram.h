@@ -92,10 +92,10 @@ void writeHistogram(Histogram* h, char* filename)
         for(i = 0; i < h->bins-1; i++)
         {
             freq = h->freq[i][channel];
-            fprintf(fp, "%d,", freq);
+            fprintf(fp, "%.2f,", freq);
         }
         freq = h->freq[i][channel];
-        fprintf(fp, "%d\n", freq);
+        fprintf(fp, "%.2f\n", freq);
     }
     fclose(fp);
 }
