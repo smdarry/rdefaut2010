@@ -183,10 +183,6 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
             int assocMatrix[blobCount];
             association(blobs, pBlobs, &m, assocMatrix);
 
-            // Print association matrix
-            for(b = 0; b < blobCount; b++)
-                printf("%d <--> %d\n", b, assocMatrix[b]);
-
             // Transfer des identites (etiquettes) aux nouveaux blobs
             for(b = 0; b < blobCount; b++)
             {
@@ -204,11 +200,17 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
                 blobs[b].label = generateLabel();
         }
 
+        // Images binaires
         drawBoundingRects(segFrame, blobs, blobCount);
         drawLabels(segFrame, blobs, blobCount);
-
         sprintf(filename, "bbox_%04d.jpg", i);
         cvSaveImage(filename, segFrame);
+
+        // Image originales
+        drawBoundingRects(frame, blobs, blobCount);
+        drawLabels(frame, blobs, blobCount);
+        sprintf(filename, "suivi_%04d.jpg", i);
+        cvSaveImage(filename, frame);
 
         pBlobCount = blobCount;
         pBlobs = blobs;
