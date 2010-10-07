@@ -449,3 +449,28 @@ IplImage* segmentMean(IplImage* frame, float threshold, GaussianModel* gm)
 
     return foregrd;
 }
+
+IplImage* stdDevImage(float k, GaussianModel* gm)
+{
+    CvSize size = cvGetSize(gm->mean);
+
+    // Images intermediaires
+    IplImage* foregrdF = cvCreateImage(size, IPL_DEPTH_32F, 3); 
+    IplImage* foregrdA = cvCreateImage(size, IPL_DEPTH_8U, 3);
+    IplImage* foregrdB = cvCreateImage(size, IPL_DEPTH_8U, 1);
+    IplImage* foregrdG = cvCreateImage(size, IPL_DEPTH_8U, 1);
+    IplImage* foregrdR = cvCreateImage(size, IPL_DEPTH_8U, 1);
+
+    // Image binaire resultante
+    IplImage* foregrd = cvCreateImage(size, IPL_DEPTH_8U, 1);
+
+    cvThreshold(gm->stdDev, foregrdF, k, 255, CV_THRESH_BINARY);
+    cvCvtScale(foregrdF, foregrdA, 1, 0);
+    
+    // Combine l'information des 3 plans avec une operation OR
+    cvSplit(foregrdA, foregrdB, foregrdG, foregrdR, NULL);
+    cvOr(foregrdB, foregrdG, foregrd, NULL);
+    cvOr(foregrd, foregrdR, foregrd, NULL);
+
+    return foregrd;
+}
