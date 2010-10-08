@@ -97,13 +97,12 @@ int main( int argc, char** argv )
 {
     int imageCount = IMAGE_COUNT;
 
-/*
     ////////////////////////////////////////
     // Question 1: problematique de la segmentation
 
     // Tracage des histogrammes temporels et chronogrammes pour 3 pixels
     computePixelStatistics("../View_008", imageCount);
-*/
+
 
     ////////////////////////////////////////
     // Question 2: etude des modeles de fond
@@ -125,7 +124,7 @@ int main( int argc, char** argv )
     MedianModel rMedianModel;
     learnRunningMedianModel(&rMedianModel, frameBuffer, imageCount, 0.95);
     cvSaveImage("RunningMedian.jpg", rMedianModel.median);
-    //releaseMedianModel(&rMedianModel);
+
 
     /////////////////////////////////////////////////////////
     // Question 3: etude du modele de decision (segmentation)
@@ -152,7 +151,7 @@ int main( int argc, char** argv )
 
     releaseMedianModel(&medianModel);
 
-/*
+
     ////////////////////////////////////////////////////////
     // Question 4: etude de la mise a jour de l'arriere-plan
     
@@ -180,9 +179,8 @@ int main( int argc, char** argv )
     cvReleaseImage(&lastFrame);
     cvReleaseImage(&forMean1);
     cvReleaseImage(&forMean2);
-*/
 
-/*
+
     ////////////////////////////////////////////////////////
     // Question 5: nettoyage du resultat de la segmentation
     
@@ -228,5 +226,4 @@ int main( int argc, char** argv )
     cvReleaseImage(&forMedian);
     cvReleaseImage(&forGauss);
     cvReleaseImage(&forMean);
-*/
 }
