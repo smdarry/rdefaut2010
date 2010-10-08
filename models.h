@@ -149,6 +149,76 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
     }
 }
 
+void learnRunningMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount, float percentile)
+{
+    CvSize fSize = cvGetSize(frameBuffer[0]);
+
+    initMedianModel(model, fSize, percentile);
+    IplImage *f; 
+    IplImage *median = model->median;
+
+    uchar blue, green, red;
+    float medianBlue, medianGreen, medianRed;
+    int iStep, stepm;
+    int row, col, i;
+
+    for(i = 0; i < frameCount; i++)
+    {
+        f = frameBuffer[i];
+
+        // Initialisation du modele avec la premiere frame
+        if(fSize.width == 0 && fSize.height == 0)
+        {
+            fSize = cvGetSize(f);
+            initMedianModel(model, fSize, percentile);
+            cvCvtScale(f, model->median, 1.0, 0);
+            median = model->median;
+            stepm = median->widthStep;
+        }
+
+        // Mise a jour du modele pixel par pixel
+        int row, col, iStep;
+        for(row = 0; row < fSize.height; row++)
+        {
+            for(col = 0; col < fSize.width; col++)
+            {
+                iStep = f->widthStep;
+
+                // Valeurs courantes de medianne
+                medianBlue = ((float*)(median->imageData + stepm*row))[col*3];
+                medianGreen= ((float*)(median->imageData + stepm*row))[col*3+1];
+                medianRed = ((float*)(median->imageData + stepm*row))[col*3+2];
+
+                // Nouvelles valeurs de pixels
+                blue = ((uchar*)(f->imageData + iStep*row))[col*3];
+                green = ((uchar*)(f->imageData + iStep*row))[col*3+1];
+                red = ((uchar*)(f->imageData + iStep*row))[col*3+2];
+                
+                // Mise a jour des valeurs mediannes
+                if(blue > medianBlue)
+                    medianBlue++;
+                else
+                    medianBlue--;
+
+                if(green > medianGreen)
+                    medianGreen++;
+                else
+                    medianGreen--;
+
+                if(red > medianRed)
+                    medianRed++;
+                else
+                    medianRed--;
+
+                // Positionne les nouvelles valeurs de mediannes dans le modele
+                ((float*)(median->imageData + stepm*row))[col*3] = medianBlue;
+                ((float*)(median->imageData + stepm*row))[col*3+1]= medianGreen;
+                ((float*)(median->imageData + stepm*row))[col*3+2] = medianRed;
+            }
+        }
+    }
+}
+
 void learnGaussianModel(GaussianModel* model, IplImage* frameBuffer[], int frameCount)
 {
     CvSize fSize = cvGetSize(frameBuffer[0]);
