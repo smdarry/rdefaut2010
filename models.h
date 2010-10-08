@@ -159,21 +159,16 @@ void learnRunningMedianModel(MedianModel* model, IplImage* frameBuffer[], int fr
 
     uchar blue, green, red;
     float medianBlue, medianGreen, medianRed;
-    int iStep, stepm;
+    int iStep, stepm = median->widthStep;
     int row, col, i;
 
     for(i = 0; i < frameCount; i++)
     {
         f = frameBuffer[i];
 
-        // Initialisation du modele avec la premiere frame
-        if(fSize.width == 0 && fSize.height == 0)
+        if(i == 0)
         {
-            fSize = cvGetSize(f);
-            initMedianModel(model, fSize, percentile);
             cvCvtScale(f, model->median, 1.0, 0);
-            median = model->median;
-            stepm = median->widthStep;
         }
 
         // Mise a jour du modele pixel par pixel
