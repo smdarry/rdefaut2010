@@ -104,7 +104,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
     MedianModel medianModel;
 
     // Apprentissage du modele
-    learnMedianModel(&medianModel, frameBuffer, frameCount, 0.95);
+    learnMedianModel(&medianModel, "../View_008", "%s/frame_%04d.jpg", frameCount, 0.95);
     
     char filename[255];
     int i, pb, b;
