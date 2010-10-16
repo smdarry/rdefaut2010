@@ -26,6 +26,14 @@ typedef struct _modeleMedian
     IplImage* stdDev;
 } MedianModel;
 
+typedef struct _modelHist
+{
+    int height;
+    int width;
+
+    Histogram** hist;
+} HistogramModel;
+
 void initMedianModel(MedianModel* model, CvSize size, float percentile)
 {
     model->percentile = percentile;
@@ -52,6 +60,38 @@ void initGaussianModel(GaussianModel* model, CvSize size)
     cvZero(model->stdDev);
 }
 
+void initHistogramModel(HistogramModel* model, CvSize size)
+{
+    model->height = size.height;
+    model->width = size.width;
+
+    // Alloue un histogramme pour chaque pixel
+    model->hist = (Histogram**)malloc(size.height*sizeof(Histogram*));
+
+    int row, col;
+    for(row = 0; row < size.height; row++)
+    {
+        model->hist[row] = (Histogram*)malloc(size.width*sizeof(Histogram));
+        
+        for(col = 0; col < size.width; col++)
+            initHistogram(&(model->hist[row][col]), 256, 3); 
+    }
+}
+
+void releaseHistogramModel(HistogramModel* model)
+{
+    int row,col;
+    for(row = 0; row < model->height; row++)
+    {
+        for(col = 0; col < model->width; col++)
+        {
+            releaseHistogram(&model->hist[row][col]);
+        }
+        free(model->hist[row]);
+    }
+    free(model->hist);
+}
+
 void releaseMedianModel(MedianModel* model)
 {
     if(model->median != NULL)
@@ -72,9 +112,59 @@ void releaseGaussianModel(GaussianModel* model)
         cvReleaseImage(&model->stdDev);
 }
 
-void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount, float percentile)
+void learnHistogramModel(HistogramModel* model, char* dir, char* pattern, int frameStart, int frameEnd)
 {
-    CvSize fSize = cvGetSize(frameBuffer[0]);
+    CvSize fSize = cvSize(0, 0);
+    IplImage* f = NULL;
+    char filename[256];
+    int i;
+    for(i = frameStart; i < frameEnd; i++)
+    {
+        sprintf(filename, pattern, dir, i);
+
+        f = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(f == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+
+        if(fSize.height == 0 && fSize.width == 0)
+        {
+            printf("Init model");
+
+            fSize = cvGetSize(f);
+            initHistogramModel(model, fSize);
+        }
+
+        // Mise a jour du modele pixel par pixel
+        int row, col;
+        for(row = 0; row < fSize.height; row++)
+        {
+            for(col = 0; col < fSize.width; col++)
+            {
+                updateHistogram(&model->hist[row][col], f, col, row);
+            }
+        }
+
+        cvReleaseImage(&f);
+    }
+}
+
+void learnMedianModel(MedianModel* model, char* dir, char* pattern, int frameCount, float percentile)
+{
+    char filename[255];
+
+    // Determine la taille des images
+    sprintf(filename, pattern, dir, 0);
+    IplImage* firstFrame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+    if(firstFrame == NULL)
+    {
+        fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+        return;
+    }
+    CvSize fSize = cvGetSize(firstFrame);   
+    cvReleaseImage(&firstFrame);
 
     initMedianModel(model, fSize, percentile);
     IplImage *f; 
@@ -94,12 +184,23 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
         {
             for(i = 0; i < frameCount; i++)
             {
-                f = frameBuffer[i];
+                sprintf(filename, pattern, dir, i);
+
+                f = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+                if(f == NULL)
+                {
+                    fprintf(stderr, "Erreur de lecture de l'image %s\n", 
+                            filename);
+                    continue;
+                }
+
                 iStep = f->widthStep;
 
                 pixelsBlue[i] = ((uchar*)(f->imageData + iStep*row))[col*3];
                 pixelsGreen[i] = ((uchar*)(f->imageData + iStep*row))[col*3+1];
                 pixelsRed[i] = ((uchar*)(f->imageData + iStep*row))[col*3+2];
+
+                cvReleaseImage(&f);
             }
 
             // Calcul des mediannes
@@ -147,6 +248,127 @@ void learnMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCoun
             ((float*)(sd->imageData + step*row))[col*3+2] = sdvRed;
         }
     }
+}
+
+void learnAdaptiveMedianModel(MedianModel* model, char* dir, char* pattern, int frameStart, int frameEnd, float percentile)
+{
+    CvSize fSize = cvSize(0,0);
+
+    IplImage *f, *pf = NULL, *ppf = NULL; 
+    IplImage *median, *sd;
+    IplImage* stdDev;
+
+    uchar blue, green, red;
+    uchar pblue, pgreen, pred;
+    float medianBlue, medianGreen, medianRed;
+    float sdvBlue = 0.0, sdvGreen = 0.0, sdvRed = 0.0;
+    int iStep, stepm;
+    int row, col, i;
+    int frameCount = 0;
+    
+    float sum = 0.0, diff = 0.0;
+
+    char filename[255];
+    for(i = frameStart; i < frameEnd; i++)
+    {
+        sprintf(filename, pattern, dir, i);
+
+        f = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+        if(f == NULL)
+        {
+            fprintf(stderr, "Erreur de lecture de l'image %s\n", filename);
+            continue;
+        }
+
+        // Initialisation du modele avec la premiere frame
+        if(i == 0)
+        {
+            fSize = cvGetSize(f);
+            initMedianModel(model, fSize, percentile);
+            cvCvtScale(f, model->median, 1.0, 0);
+            stdDev = cvCreateImage(fSize, IPL_DEPTH_32F, 3);
+
+            median = model->median;
+            sd = model->stdDev;
+            stepm = median->widthStep;
+        }
+
+        // Mise a jour du modele pixel par pixel
+        int row, col, iStep;
+        for(row = 0; row < fSize.height; row++)
+        {
+            for(col = 0; col < fSize.width; col++)
+            {
+                iStep = f->widthStep;
+
+                // Valeurs courantes de medianne
+                medianBlue = ((float*)(median->imageData + stepm*row))[col*3];
+                medianGreen= ((float*)(median->imageData + stepm*row))[col*3+1];
+                medianRed = ((float*)(median->imageData + stepm*row))[col*3+2];
+
+                // Nouvelles valeurs de pixels
+                blue = ((uchar*)(f->imageData + iStep*row))[col*3];
+                green = ((uchar*)(f->imageData + iStep*row))[col*3+1];
+                red = ((uchar*)(f->imageData + iStep*row))[col*3+2];
+                
+                // Mise a jour des valeurs mediannes
+                if(blue > medianBlue)
+                    medianBlue++;
+                else
+                    medianBlue--;
+
+                if(green > medianGreen)
+                    medianGreen++;
+                else
+                    medianGreen--;
+
+                if(red > medianRed)
+                    medianRed++;
+                else
+                    medianRed--;
+
+                // Positionne les nouvelles valeurs de mediannes dans le modele
+                ((float*)(median->imageData + stepm*row))[col*3] = medianBlue;
+                ((float*)(median->imageData + stepm*row))[col*3+1]= medianGreen;
+                ((float*)(median->imageData + stepm*row))[col*3+2] = medianRed;
+
+                if(i > 0)
+                {
+                    // Valeurs courantes d'ecart-type
+                    sdvBlue = ((float*)(sd->imageData + stepm*row))[col*3];
+                    sdvGreen= ((float*)(sd->imageData + stepm*row))[col*3+1];
+                    sdvRed = ((float*)(sd->imageData + stepm*row))[col*3+2];
+
+                    // Valeurs precedentes d'image
+                    pblue = ((uchar*)(pf->imageData + iStep*row))[col*3];
+                    pgreen = ((uchar*)(pf->imageData + iStep*row))[col*3+1];
+                    pred = ((uchar*)(pf->imageData + iStep*row))[col*3+2];
+                    
+                    // Differences d'images
+                    sdvBlue += fabsf(blue - pblue);
+                    sdvGreen += fabsf(green - pgreen);
+                    sdvRed += fabsf(red - pred);
+
+                    // Positionne les nouvelles valeurs
+                    ((float*)(sd->imageData + stepm*row))[col*3] = sdvBlue;
+                    ((float*)(sd->imageData + stepm*row))[col*3+1] = sdvGreen;
+                    ((float*)(sd->imageData + stepm*row))[col*3+2] = sdvRed;
+                }
+            }
+        }
+        ppf = pf;
+        pf = f;
+
+        if(ppf != NULL)
+            cvReleaseImage(&ppf);
+
+        frameCount++;
+    }
+
+    // Moyenne des differences ~= ecart-types
+    //cvCvtScale(sd, sd, (float)(1.0/frameCount), 0);
+
+    //cvReleaseImage(&f);
 }
 
 void learnRunningMedianModel(MedianModel* model, IplImage* frameBuffer[], int frameCount, float percentile)
