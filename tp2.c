@@ -204,13 +204,13 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         drawBoundingRects(segFrame, blobs, blobCount);
         drawLabels(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
-        cvSaveImage(filename, segFrame);
+        cvSaveImage(filename, segFrame, NULL);
 
         // Image originales
         drawBoundingRects(frame, blobs, blobCount);
         drawLabels(frame, blobs, blobCount);
         sprintf(filename, "suivi_%04d.jpg", i);
-        cvSaveImage(filename, frame);
+        cvSaveImage(filename, frame, NULL);
 
         pBlobCount = blobCount;
         pBlobs = blobs;
@@ -223,8 +223,7 @@ int main(int argc, char *argv[])
     int frameCount = 296 - 189 + 1;
     IplImage* frameBuffer[frameCount];
 
-    //selectFrames("../View_008", frameBuffer, frameCount, 1);
-    pickFrames("../View_008", frameBuffer, 189, 296);
+    pickFrames("../View_008", "%s/frame_%04d.jpg", frameBuffer, 189, 296);
 
     // On fait rouler la machine
     playLoop(frameBuffer, frameCount);
