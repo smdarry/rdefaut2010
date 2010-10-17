@@ -149,7 +149,7 @@ void openSave(IplImage* frame, int maskSize, char* filename)
     IplImage* tmp = cvCloneImage(frame);
 
     opening(frame, tmp, maskSize);
-    cvSaveImage(filename, tmp);
+    cvSaveImage(filename, tmp, NULL);
 
     cvReleaseImage(&tmp);
 }
@@ -160,7 +160,7 @@ void openCloseSave(IplImage* frame, int maskSize, char* filename)
 
     opening(frame, tmp, maskSize);
     closing(tmp, tmp, maskSize);
-    cvSaveImage(filename, tmp);
+    cvSaveImage(filename, tmp, NULL);
 
     cvReleaseImage(&tmp);
 }
@@ -205,7 +205,7 @@ void selectFrames(char* dir, IplImage* frameBuffer[], int frameCount, int interv
     }
 }
 
-void pickFrames(char* dir, IplImage* frameBuffer[], int frameBegin, int frameEnd)
+void pickFrames(char* dir, char* pattern, IplImage* frameBuffer[], int frameBegin, int frameEnd)
 {
     int frameBufIndex = 0;
     char filename[256];
@@ -215,7 +215,7 @@ void pickFrames(char* dir, IplImage* frameBuffer[], int frameBegin, int frameEnd
     int i;
     for(i = frameBegin; i <= frameEnd; i++)
     {
-        sprintf(filename, "%s/frame_%04d.jpg", dir, i);
+        sprintf(filename, pattern, dir, i);
 
         frame = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
         if(frame == NULL)
