@@ -99,6 +99,8 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
     Blob* pBlobs = NULL;
     int pBlobCount = 0;
 
+    CvMemStorage* storage = cvCreateMemStorage(0);
+
     /////////////////////////////////////////// 
     // Etape 1: construction du modele de fond
     MedianModel medianModel;
@@ -129,7 +131,7 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         DistMetrics m;
 
         // Extraction des blobs
-        int blobCount = extractBlobs(segFrame, frame, &blobs);
+        int blobCount = extractBlobs(segFrame, frame, &blobs, storage);
     
         if(pBlobs != NULL)
         {
@@ -194,17 +196,18 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         drawBoundingRects(segFrame, blobs, blobCount);
         drawLabels(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
-        cvSaveImage(filename, segFrame, NULL);
+        cvSaveImage(filename, segFrame);
 
         // Image originales
         drawBoundingRects(frame, blobs, blobCount);
         drawLabels(frame, blobs, blobCount);
         sprintf(filename, "suivi_%04d.jpg", i);
-        cvSaveImage(filename, frame, NULL);
+        cvSaveImage(filename, frame);
 
         pBlobCount = blobCount;
         pBlobs = blobs;
     }
+    cvReleaseMemStorage(&storage);
 }
 
 int main(int argc, char *argv[])

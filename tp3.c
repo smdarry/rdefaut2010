@@ -105,6 +105,8 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
     Blob *outdatedBlobs = NULL;
     int pBlobCount = 0;
 
+    CvMemStorage* storage = cvCreateMemStorage(0);
+
     char filename[255];
     int i, pb, b;
     IplImage* frame = NULL, *segFrame = NULL;
@@ -128,10 +130,10 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         ////////////////////////////////////////////
         // Etape 2: segmentation utilisant le modele
          
-        segFrame = segmentMedian(frame, 30.0, &medianModel);
+        segFrame = segmentMedian(frame, 15.0, &medianModel);
         
-        opening(segFrame, segFrame, 3);
-        closing(segFrame, segFrame, 3);
+        opening(segFrame, segFrame, 5);
+        closing(segFrame, segFrame, 5);
         
 
         ///////////////////////////////////////////////////////////
@@ -140,7 +142,7 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         //DistMetrics m;
 
         // Extraction des blobs
-        int blobCount = extractBlobs(segFrame, frame, &blobs);
+        int blobCount = extractBlobs(segFrame, frame, &blobs, storage);
 
         /*
         if(pBlobs != NULL)
@@ -202,20 +204,19 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
                 blobs[b].label = generateLabel();
         }
         */
-    /*
+
         // Images binaires
         drawBoundingRects(segFrame, blobs, blobCount);
         drawLabels(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
-        cvSaveImage(filename, segFrame, NULL);
+        cvSaveImage(filename, segFrame);
 
         // Image originales
         drawBoundingRects(frame, blobs, blobCount);
         drawLabels(frame, blobs, blobCount);
         sprintf(filename, "suivi_%04d.jpg", i);
-        cvSaveImage(filename, frame, NULL);
+        cvSaveImage(filename, frame);
 
-    */
         outdatedBlobs = pBlobs;
         pBlobCount = blobCount;
         pBlobs = blobs;
@@ -226,6 +227,7 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         if(outdatedBlobs != NULL)
             releaseBlobs(outdatedBlobs);
     }
+    cvReleaseMemStorage(&storage);
 }
 
 int main(int argc, char *argv[])

@@ -135,7 +135,7 @@ void buildHistograms(Blob* blob, IplImage* frame)
     }
 }
 
-int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
+int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs, CvMemStorage* storage)
 {    
     // Pre-Filtrage pour enlever les valeurs dues a la compression de l'image
     cvThreshold(binFrame, binFrame, 200, 255, CV_THRESH_BINARY);
@@ -149,11 +149,10 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
 
     // Separation des pixels de chaque blob dans des listes chainees
     CvSeq* blobPoints[blobCount];
-    CvMemStorage* storage = cvCreateMemStorage(0);
 
+    cvClearMemStorage(storage);
     initPointSeqs(blobPoints, blobCount, storage);
     
-    CvPoint* p;
     int row, col, label;
     for(row = 0 ; row < matEtiq->rows; row++)
     {
@@ -163,14 +162,12 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
             if(label > 0)
             {
                 // Ajoute un point dans la bonne liste
-                p = (CvPoint*)malloc(sizeof(CvPoint));
-                p->x = col; p->y = row;
-
-                cvSeqPush(blobPoints[label-1], p);
+                CvPoint p = {col, row};
+                cvSeqPush(blobPoints[label-1], &p);
             }
         }
     }
-    cvReleaseMat(&matEtiq);
+    free(matEtiq->data.i);
 
     // On ne garde que les "gros" blobs
     CvSeq* bigBlobPoints[blobCount];
@@ -213,9 +210,6 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
         normalizeHistogram(&newBlobs[b].h15);
     }
     */
-
-    // Liberation de la memoire
-    cvReleaseMemStorage(&storage);
 
     *blobs = newBlobs;
 
