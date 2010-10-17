@@ -131,16 +131,6 @@ void playLoop(IplImage* frameBuffer[], int frameCount)
         // Extraction des blobs
         int blobCount = extractBlobs(segFrame, frame, &blobs);
     
-        // Calcul des histogrammes pour chaque blob
-        for(b = 0; b < blobCount; b++)
-        {
-            buildHistograms(&blobs[b], frame);
-
-            normalizeHistogram(&blobs[b].h5);
-            normalizeHistogram(&blobs[b].h10);
-            normalizeHistogram(&blobs[b].h15);
-        }
-
         if(pBlobs != NULL)
         {
             // Matrice des combinaisons de recouvrements spatiaux
