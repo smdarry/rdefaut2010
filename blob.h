@@ -3,6 +3,8 @@
 #include "histogram.h"
 #include "etiquette.h"
 
+#define BLOB_SIZE 200
+
 typedef struct _blob
 {
     int label;
@@ -116,6 +118,23 @@ float percentOverlap(Blob* b1, Blob* b2)
     return (intArea / b1Area);
 }
 
+void buildHistograms(Blob* blob, IplImage* frame)
+{
+    initHistogram(&blob->h5, 5, 3);
+    initHistogram(&blob->h10, 10, 3);
+    initHistogram(&blob->h15, 15, 3);
+
+    int i;
+    for(i = 0; i < blob->points->total; i++)
+    {
+        CvPoint* p = (CvPoint*)cvGetSeqElem(blob->points, i);
+
+        updateHistogram(&blob->h5, frame, p->x, p->y);
+        updateHistogram(&blob->h10, frame, p->x, p->y);
+        updateHistogram(&blob->h15, frame, p->x, p->y);
+    }
+}
+
 int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
 {    
     // Pre-Filtrage pour enlever les valeurs dues a la compression de l'image
@@ -124,12 +143,9 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     // Extraction des blobs
     CvMat* matEtiq = cvCreateMatHeader(binFrame->height, binFrame->width, 
                                        CV_32SC1);
-    IplImage *imgEtiq = cvCreateImage(cvGetSize(binFrame), IPL_DEPTH_8U, 1);
-
     int blobCount = etiquetage((uchar*)binFrame->imageData, 
                                (int**)&matEtiq->data.i, binFrame->width, 
                                binFrame->height);
-    cvReleaseImage(&imgEtiq);
 
     // Separation des pixels de chaque blob dans des listes chainees
     CvSeq* blobPoints[blobCount];
@@ -154,15 +170,16 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
             }
         }
     }
+    cvReleaseMat(&matEtiq);
 
-    // On ne garde que les "gros" blobs (+ de 1000 points)
+    // On ne garde que les "gros" blobs
     CvSeq* bigBlobPoints[blobCount];
     int b, bigBlobCount = 0;
     CvSeq* points;
     for(b = 0; b < blobCount; b++)
     {
         points = blobPoints[b];
-        if(points->total > 1000)
+        if(points->total > BLOB_SIZE)
         {
             bigBlobPoints[bigBlobCount++] = points;
         }
@@ -184,6 +201,22 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
     {
         boundingBox(&newBlobs[b]);
     }
+
+    /*
+    // Calcul des histogrammes
+    for(b = 0; b < blobCount; b++)
+    {
+        buildHistograms(&newBlobs[b], colorFrame);
+
+        normalizeHistogram(&newBlobs[b].h5);
+        normalizeHistogram(&newBlobs[b].h10);
+        normalizeHistogram(&newBlobs[b].h15);
+    }
+    */
+
+    // Liberation de la memoire
+    cvReleaseMemStorage(&storage);
+
     *blobs = newBlobs;
 
     return bigBlobCount;
@@ -191,7 +224,6 @@ int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs)
 
 void releaseBlobs(Blob* blobs)
 {
-    cvReleaseMemStorage(&blobs->storage);
     free(blobs);
 }
 
@@ -230,22 +262,5 @@ void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
         CvFont font;
         cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA);
         cvPutText(frame, label, p1, &font, cvScalar(255, 255, 255, 0));
-    }
-}
-
-void buildHistograms(Blob* blob, IplImage* frame)
-{
-    initHistogram(&blob->h5, 5, 3);
-    initHistogram(&blob->h10, 10, 3);
-    initHistogram(&blob->h15, 15, 3);
-
-    int i;
-    for(i = 0; i < blob->points->total; i++)
-    {
-        CvPoint* p = (CvPoint*)cvGetSeqElem(blob->points, i);
-
-        updateHistogram(&blob->h5, frame, p->x, p->y);
-        updateHistogram(&blob->h10, frame, p->x, p->y);
-        updateHistogram(&blob->h15, frame, p->x, p->y);
     }
 }
