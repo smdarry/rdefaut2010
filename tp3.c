@@ -132,8 +132,8 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
          
         segFrame = segmentMedian(frame, 15.0, &medianModel);
         
-        opening(segFrame, segFrame, 5);
-        closing(segFrame, segFrame, 5);
+        opening(segFrame, segFrame, 3);
+        closing(segFrame, segFrame, 3);
         
 
         ///////////////////////////////////////////////////////////
@@ -204,6 +204,13 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
                 else
                     blobs[b].label = generateLabel();
             }
+
+            // Evaluate velocity for each blob
+            for(b = 0; b < blobCount; b++)
+            {
+                int index = assocMatrix[b];
+                velocity(&pBlobs[index], &blobs[b]);
+            }
         }
         else
         {
@@ -215,12 +222,14 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         // Images binaires
         drawBoundingRects(segFrame, blobs, blobCount);
         drawLabels(segFrame, blobs, blobCount);
+        drawVelocityVectors(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
         cvSaveImage(filename, segFrame);
 
         // Image originales
         drawBoundingRects(frame, blobs, blobCount);
         drawLabels(frame, blobs, blobCount);
+        drawVelocityVectors(frame, blobs, blobCount);
         sprintf(filename, "suivi_%04d.jpg", i);
         cvSaveImage(filename, frame);
 
