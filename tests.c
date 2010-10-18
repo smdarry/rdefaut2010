@@ -236,6 +236,27 @@ void testOverlappingBlobsArea()
     printf("Expected: 1.00, Actual: %.2f\n", area);
 }
 
+void testMergeBlobs()
+{
+    printf("\nTEST MERGE BLOBS\n");
+
+    Blob* b = malloc(3 * sizeof(Blob));
+
+    b[0].box.x = 0; b[0].box.y = 5;
+    b[0].box.width = 2; b[0].box.height = 2;
+
+    b[1].box.x = 1; b[1].box.y = 1;
+    b[1].box.width = 3; b[1].box.height = 3;
+
+    b[2].box.x = 3; b[2].box.y = 2;
+    b[2].box.width = 3; b[2].box.height = 3;
+
+    int blobCount = mergeBlobs(&b, 3, 0);
+    printf("Expected: 2, Actual: %d\n", blobCount);
+
+    free(b);
+}
+
 void testAbsDiffHistograms()
 {
     printf("\nTEST HISTOGRAM DIFFERENCE\n");
@@ -355,6 +376,8 @@ int main( int argc, char** argv )
     testOverlappingBlobs();
     
     testOverlappingBlobsArea();
+    
+    testMergeBlobs();
     
     testAbsDiffHistograms();
 
