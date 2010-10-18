@@ -124,6 +124,56 @@ float percentOverlap(Blob* b1, Blob* b2)
     return (intArea / b1Area);
 }
 
+int mergeBlobs(Blob** blobsOut, int blobCount, float distance)
+{
+    Blob* blobs = *blobsOut;
+
+    Blob newBlobs[blobCount];
+    char isDeleted[blobCount];
+    int newBlobCount = blobCount;
+
+    // Initialisation du tableau des suppressions
+    int i;
+    for(i = 0; i < blobCount; i++)
+        isDeleted[i] = 0;
+
+    int b,ob;
+    for(b = 0; b < blobCount; b++)
+    {
+        for(ob = 0; ob < blobCount; ob++)
+        {
+            if(b == ob)
+                continue;
+
+            if(isDeleted[b] || isDeleted[ob])
+                continue;
+
+            if(areOverlapping(&blobs[b], &blobs[ob]))
+            {
+                // Les blobs se touchent, on les fusionne
+                CvSeq* b1Points = blobs[b].points;
+                CvSeq* b2Points = blobs[ob].points;
+
+                int i;
+                for(i = 0; i < b2Points->total; i++)
+                {
+                    CvPoint* p = (CvPoint*)cvGetSeqElem(b2Points, i);
+                    cvSeqPush(b1Points, p);
+                }
+
+                // Recalcul de la boite englobante
+                boundingBox(&blobs[b]);
+
+                // Marque le deuxieme blob comme supprime
+                isDeleted[ob] = 1;
+                newBlobCount--;
+            }
+        }
+    }
+
+    return newBlobCount;
+}
+
 void buildHistograms(Blob* blob, IplImage* frame)
 {
     initHistogram(&blob->h5, 5, 3);
@@ -141,7 +191,7 @@ void buildHistograms(Blob* blob, IplImage* frame)
     }
 }
 
-void evaluateVelocity(Blob* pBlob, Blob* blob)
+void velocity(Blob* pBlob, Blob* blob)
 {
     blob->dirX = blob->box.x - pBlob->box.x;
     blob->dirY = blob->box.y - pBlob->box.y;
