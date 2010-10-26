@@ -3,7 +3,8 @@
 #include "histogram.h"
 #include "etiquette.h"
 
-#define BLOB_SIZE 200
+#define BLOB_SIZE 80
+#define ALPHA 0.5
 
 #define SQUARE(x) x*x
 
@@ -15,6 +16,7 @@ typedef struct _blob
     CvMemStorage* storage;
 
     CvRect box;
+    float aspectRatio;
 
     Histogram h5;
     Histogram h10;
@@ -23,6 +25,10 @@ typedef struct _blob
     int dirX;
     int dirY;
     float speed;
+
+    int avgDirX;
+    int avgDirY;
+    float avgSpeed;
 } Blob;
 
 void initPointSeqs(CvSeq* seqs[], int length, CvMemStorage* storage)
@@ -76,6 +82,8 @@ inline void boundingBox(Blob* blob)
     blob->box.y = minY;
     blob->box.width = maxX - minX;
     blob->box.height = maxY - minY;
+
+    blob->aspectRatio = blob->box.width / (float)blob->box.height;
 }
 
 int areOverlapping(Blob* b1, Blob* b2)
@@ -86,8 +94,8 @@ int areOverlapping(Blob* b1, Blob* b2)
     const int r1_y1 = b1->box.y, r1_y2 = b1->box.y + b1->box.height;
     const int r2_y1 = b2->box.y, r2_y2 = b2->box.y + b2->box.height;
 
-    if(r1_x1 < r2_x2 && r1_x2 > r2_x1 && 
-       r1_y1 < r2_y2 && r1_y2 > r2_y1)
+    if(r1_x1 <= r2_x2 && r1_x2 >= r2_x1 && 
+       r1_y1 <= r2_y2 && r1_y2 >= r2_y1)
         return 1;
 
     return 0;
@@ -124,11 +132,34 @@ float percentOverlap(Blob* b1, Blob* b2)
     return (intArea / b1Area);
 }
 
+void copyBlob(Blob* src, Blob* dst)
+{
+    dst->label = src->label;
+    dst->points = src->points;
+    dst->storage = src->storage;
+
+    dst->box.x = src->box.x;
+    dst->box.y = src->box.y;
+    dst->box.width = src->box.width;
+    dst->box.height = src->box.height;
+    dst->aspectRatio = src->aspectRatio;
+    dst->speed = src->speed;
+
+/*
+    dst->dirX = src->dirX;
+    dst->dirY = src->dirY;
+    dst->speed = src->speed;
+
+    dst->avgDirX = src->avgDirX;
+    dst->avgDirY = src->avgDirY;
+    dst->avgSpeed = src->avgSpeed;
+*/
+}
+
 int mergeBlobs(Blob** blobsOut, int blobCount, float distance)
 {
     Blob* blobs = *blobsOut;
 
-    Blob newBlobs[blobCount];
     char isDeleted[blobCount];
     int newBlobCount = blobCount;
 
@@ -171,6 +202,17 @@ int mergeBlobs(Blob** blobsOut, int blobCount, float distance)
         }
     }
 
+    // Preparation de la valeur de retour
+    Blob *blobsTmp = (Blob*) malloc(newBlobCount * sizeof(Blob));
+    int k = 0;
+    for(b = 0; b < blobCount; b++)
+    {   
+        if(!isDeleted[b])
+            copyBlob(&blobs[b], &blobsTmp[k++]);
+    }
+    free(blobs);
+
+    *blobsOut = blobsTmp;
     return newBlobCount;
 }
 
@@ -193,10 +235,29 @@ void buildHistograms(Blob* blob, IplImage* frame)
 
 void velocity(Blob* pBlob, Blob* blob)
 {
+    if(pBlob == NULL)
+    {
+        blob->dirX = 0;
+        blob->dirY = 0;
+        blob->speed = 0.0;
+
+        blob->avgDirX = 0;
+        blob->avgDirY = 0;
+        blob->avgSpeed = 0.0;
+
+        return;
+    }
+    
     blob->dirX = blob->box.x - pBlob->box.x;
     blob->dirY = blob->box.y - pBlob->box.y;
 
     blob->speed = sqrt(SQUARE(blob->dirX) + SQUARE(blob->dirY));
+
+    // Running average speed and orientation
+    blob->avgDirX = (1.0-ALPHA)*blob->avgDirX + ALPHA*blob->dirX; 
+    blob->avgDirY = (1.0-ALPHA)*blob->avgDirY + ALPHA*blob->dirY; 
+
+    blob->avgSpeed = (1.0-ALPHA)*blob->avgSpeed + ALPHA*blob->speed; 
 }
 
 int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs, CvMemStorage* storage)
@@ -326,4 +387,11 @@ void drawVelocityVectors(IplImage* frame, Blob* blobs, int blobCount)
 
         cvLine(frame, p1, p2, cvScalar(255, 255, 255, 0), 1, 8, 0);
     }
+}
+
+void writeBlob(Blob* blob)
+{
+    FILE* fp = fopen("blobs.cvs", "w+");
+    fprintf(fp, "0 %d:%d %d:%d\n", blob->aspectRatio, blob->speed);
+    fclose(fp);
 }
