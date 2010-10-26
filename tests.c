@@ -240,21 +240,130 @@ void testMergeBlobs()
 {
     printf("\nTEST MERGE BLOBS\n");
 
-    Blob* b = malloc(3 * sizeof(Blob));
+    int blobCount = 3;
+    CvPoint p1, p2, p3, p4;
+
+    Blob* b = malloc(blobCount * sizeof(Blob));
+    CvMemStorage* storage = cvCreateMemStorage(0);
+    CvSeq* blobPoints[blobCount];
+    initPointSeqs(blobPoints, blobCount, storage);
 
     b[0].box.x = 0; b[0].box.y = 5;
     b[0].box.width = 2; b[0].box.height = 2;
+    p1 = cvPoint(0,5);
+    p2 = cvPoint(0,7);
+    p3 = cvPoint(2,7);
+    p4 = cvPoint(2,5);
+    cvSeqPush(blobPoints[0], &p1);
+    cvSeqPush(blobPoints[0], &p2);
+    cvSeqPush(blobPoints[0], &p3);
+    cvSeqPush(blobPoints[0], &p4);
+    b[0].points = blobPoints[0];
 
     b[1].box.x = 1; b[1].box.y = 1;
     b[1].box.width = 3; b[1].box.height = 3;
+    p1 = cvPoint(1,1);
+    p2 = cvPoint(1,4);
+    p3 = cvPoint(4,4);
+    p4 = cvPoint(4,1);
+    cvSeqPush(blobPoints[1], &p1);
+    cvSeqPush(blobPoints[1], &p2);
+    cvSeqPush(blobPoints[1], &p3);
+    cvSeqPush(blobPoints[1], &p4);
+    b[1].points = blobPoints[1];
 
     b[2].box.x = 3; b[2].box.y = 2;
     b[2].box.width = 3; b[2].box.height = 3;
+    p1 = cvPoint(3,2);
+    p2 = cvPoint(3,5);
+    p3 = cvPoint(6,5);
+    p4 = cvPoint(6,2);
+    cvSeqPush(blobPoints[2], &p1);
+    cvSeqPush(blobPoints[2], &p2);
+    cvSeqPush(blobPoints[2], &p3);
+    cvSeqPush(blobPoints[2], &p4);
+    b[2].points = blobPoints[2];
 
-    int blobCount = mergeBlobs(&b, 3, 0);
+    blobCount = mergeBlobs(&b, 3, 0);
     printf("Expected: 2, Actual: %d\n", blobCount);
+    printf("Expected: 4, Actual: %d\n", b[0].points->total);
+    printf("Expected: 8, Actual: %d\n", b[1].points->total);
+
+    // Boites englobantes
+    printf("Expected: 0, Actual: %d\n", b[0].box.x);
+    printf("Expected: 5, Actual: %d\n", b[0].box.y);
+    printf("Expected: 1, Actual: %d\n", b[1].box.x);
+    printf("Expected: 1, Actual: %d\n", b[1].box.y);
+    printf("Expected: 5, Actual: %d\n", b[1].box.width);
+    printf("Expected: 4, Actual: %d\n", b[1].box.height);
 
     free(b);
+    cvReleaseMemStorage(&storage);
+}
+
+void testMergeBlobs2()
+{
+    printf("\nTEST MERGE BLOBS - 2\n");
+
+    int blobCount = 3;
+    CvPoint p1, p2, p3, p4;
+
+    /////////////////////////////////////////////
+    // Test 2
+
+    Blob* b2 = malloc(blobCount * sizeof(Blob));
+    CvSeq* blobPoints2[blobCount];
+    CvMemStorage* storage2 = cvCreateMemStorage(0);
+    initPointSeqs(blobPoints2, blobCount, storage2);
+
+    b2[0].box.x = 1; b2[0].box.y = 1;
+    b2[0].box.width = 2; b2[0].box.height = 2;
+    p1 = cvPoint(1,1);
+    p2 = cvPoint(1,3);
+    p3 = cvPoint(3,3);
+    p4 = cvPoint(3,1);
+    cvSeqPush(blobPoints2[0], &p1);
+    cvSeqPush(blobPoints2[0], &p2);
+    cvSeqPush(blobPoints2[0], &p3);
+    cvSeqPush(blobPoints2[0], &p4);
+    b2[0].points = blobPoints2[0];
+
+    b2[1].box.x = 2; b2[1].box.y = 2;
+    b2[1].box.width = 2; b2[1].box.height = 2;
+    p1 = cvPoint(2,2);
+    p2 = cvPoint(2,4);
+    p3 = cvPoint(4,4);
+    p4 = cvPoint(4,2);
+    cvSeqPush(blobPoints2[1], &p1);
+    cvSeqPush(blobPoints2[1], &p2);
+    cvSeqPush(blobPoints2[1], &p3);
+    cvSeqPush(blobPoints2[1], &p4);
+    b2[1].points = blobPoints2[1];
+
+    b2[2].box.x = 3; b2[2].box.y = 3;
+    b2[2].box.width = 2; b2[2].box.height = 2;
+    p1 = cvPoint(3,3);
+    p2 = cvPoint(3,5);
+    p3 = cvPoint(5,5);
+    p4 = cvPoint(5,3);
+    cvSeqPush(blobPoints2[2], &p1);
+    cvSeqPush(blobPoints2[2], &p2);
+    cvSeqPush(blobPoints2[2], &p3);
+    cvSeqPush(blobPoints2[2], &p4);
+    b2[2].points = blobPoints2[2];
+
+    blobCount = mergeBlobs(&b2, 3, 0);
+    printf("Expected: 1, Actual: %d\n", blobCount);
+    printf("Expected: 12, Actual: %d\n", b2[0].points->total);
+
+    // Boites englobantes
+    printf("Expected: 1, Actual: %d\n", b2[0].box.x);
+    printf("Expected: 1, Actual: %d\n", b2[0].box.y);
+    printf("Expected: 4, Actual: %d\n", b2[0].box.width);
+    printf("Expected: 4, Actual: %d\n", b2[0].box.height);
+
+    free(b2);
+    cvReleaseMemStorage(&storage2);
 }
 
 void testAbsDiffHistograms()
@@ -378,6 +487,8 @@ int main( int argc, char** argv )
     testOverlappingBlobsArea();
     
     testMergeBlobs();
+    
+    testMergeBlobs2();
     
     testAbsDiffHistograms();
 
