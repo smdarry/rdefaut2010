@@ -1,11 +1,11 @@
-HEADERS = blob.h histogram.h models.h stats.h utils.h etiquette.h
+HEADERS = blob.h histogram.h models.h stats.h utils.h etiquette.h tracking.h
 
 all: tp1 tp2 tp3 tests
 tp1: tp1.o
 	gcc -o tp1 tp1.o `pkg-config opencv --libs`
 tp1.o: tp1.c $(HEADERS)
 	gcc -g -o tp1.o -c tp1.c `pkg-config opencv --cflags`
-tests: tests.c stats.h
+tests: tests.c $(HEADERS)
 	gcc -g -o tests tests.c etiquette.o `pkg-config opencv --libs` `pkg-config opencv --cflags`
 
 tp2: tp2.o etiquette.o
