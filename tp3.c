@@ -60,18 +60,28 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         closing(segFrame, segFrame, 3);
         
 
-        ///////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////
         // Etape 3: extraction des blobs et de leur caracteristiques
         
         // Extraction des blobs
         int blobCount = extractBlobs(segFrame, frame, &blobs, storage);
         blobCount = mergeBlobs(&blobs, blobCount, 0);
 
+        // Calcul des histogrammes
+        for(b = 0; b < blobCount; b++)
+        {
+            buildHistograms(&blobs[b], frame);
+
+            normalizeHistogram(&blobs[b].h5);
+            normalizeHistogram(&blobs[b].h10);
+            normalizeHistogram(&blobs[b].h15);
+        }
+
         if(pBlobs != NULL && blobCount > 0 && pBlobCount > 0)
         {
-            ///////////////////////////////////////
-            // Etape 4: fusion temporelle des blobs
-            fusion(blobs, pBlobs, blobCount, pBlobCount);
+            /////////////////////////////////////////////////
+            // Etape 4: fusion temporelle des blobs -> mise a jour des tracks
+            fusion(blobs, blobCount, pBlobs, pBlobCount);
 
             int b;
             for(b = 0; b < blobCount; b++)
@@ -102,14 +112,14 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
         drawLabels(segFrame, blobs, blobCount);
         drawVelocityVectors(segFrame, blobs, blobCount);
         sprintf(filename, "bbox_%04d.jpg", i);
-        cvSaveImage(filename, segFrame, NULL);
+        cvSaveImage(filename, segFrame);
 
         // Image originales
         drawBoundingRects(frame, blobs, blobCount);
         drawLabels(frame, blobs, blobCount);
         drawVelocityVectors(frame, blobs, blobCount);
         sprintf(filename, "suivi_%04d.jpg", i);
-        cvSaveImage(filename, frame, NULL);
+        cvSaveImage(filename, frame);
 
         outdatedBlobs = pBlobs;
         pBlobCount = blobCount;
