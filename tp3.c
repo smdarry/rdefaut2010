@@ -86,10 +86,13 @@ void playLoop(char* dir, char* filePattern, int firstFrame, int lastFrame)
             int b;
             for(b = 0; b < blobCount; b++)
             {
-                printf("A/R: %.2f\n", blobs[b].aspectRatio);
-                fprintf(trackData, "%.2f,%.2f\n", blobs[b].aspectRatio,
+                if(blobs[b].label == 2)
+                {
+                    printf("A/R: %.2f\n", blobs[b].aspectRatio);
+                    fprintf(trackData, "%.2f,%.2f\n", blobs[b].aspectRatio,
                                             blobs[b].speed);
-                fflush(trackData);
+                    fflush(trackData);
+                }
             }
     
             //////////////////////////
