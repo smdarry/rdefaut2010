@@ -8,15 +8,22 @@
 
 #define SQUARE(x) x*x
 
+typedef enum _trackClass {
+    VEHICLE = 1,
+    PERSON = 2
+} TrackClass;
+
 typedef struct _blob
 {
     int label;
+    int classif;
 
     CvSeq* points;
     CvMemStorage* storage;
 
     CvRect box;
     float aspectRatio;
+    float area;
 
     Histogram h5;
     Histogram h10;
@@ -84,6 +91,7 @@ inline void boundingBox(Blob* blob)
     blob->box.height = maxY - minY;
 
     blob->aspectRatio = blob->box.width / (float)blob->box.height;
+    blob->area = blob->box.width * (float) blob->box.height;
 }
 
 int areOverlapping(Blob* b1, Blob* b2)
@@ -143,9 +151,7 @@ void copyBlob(Blob* src, Blob* dst)
     dst->box.width = src->box.width;
     dst->box.height = src->box.height;
     dst->aspectRatio = src->aspectRatio;
-    dst->speed = src->speed;
 
-/*
     dst->dirX = src->dirX;
     dst->dirY = src->dirY;
     dst->speed = src->speed;
@@ -153,7 +159,6 @@ void copyBlob(Blob* src, Blob* dst)
     dst->avgDirX = src->avgDirX;
     dst->avgDirY = src->avgDirY;
     dst->avgSpeed = src->avgSpeed;
-*/
 }
 
 int mergeBlobs(Blob** blobsOut, int blobCount, float distance)
@@ -254,10 +259,10 @@ void velocity(Blob* pBlob, Blob* blob)
     blob->speed = sqrt(SQUARE(blob->dirX) + SQUARE(blob->dirY));
 
     // Running average speed and orientation
-    blob->avgDirX = (1.0-ALPHA)*blob->avgDirX + ALPHA*blob->dirX; 
-    blob->avgDirY = (1.0-ALPHA)*blob->avgDirY + ALPHA*blob->dirY; 
+    blob->avgDirX = (1.0-ALPHA)*blob->avgDirX + ALPHA*blob->dirX;
+    blob->avgDirY = (1.0-ALPHA)*blob->avgDirY + ALPHA*blob->dirY;
 
-    blob->avgSpeed = (1.0-ALPHA)*blob->avgSpeed + ALPHA*blob->speed; 
+    blob->avgSpeed = (1.0-ALPHA)*blob->avgSpeed + ALPHA*blob->speed;
 }
 
 int extractBlobs(IplImage* binFrame, IplImage* colorFrame, Blob** blobs, CvMemStorage* storage)
@@ -347,7 +352,12 @@ void drawBoundingRects(IplImage* frame, Blob* blobs, int blobCount)
         CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
         CvPoint p2 = cvPoint(blob->box.x + blob->box.width, blob->box.y + blob->box.height);
 
-        cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
+        if(blob->classif == PERSON)
+            cvRectangle(frame, p1, p2, CV_RGB(255,0,0), 1, 8, 0);
+        else if(blob->classif == VEHICLE)
+            cvRectangle(frame, p1, p2, CV_RGB(0,0,255), 1, 8, 0);
+        else
+            cvRectangle(frame, p1, p2, CV_RGB(255,255,255), 1, 8, 0);
     }
 }
 
@@ -363,11 +373,11 @@ void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
 
         CvPoint p1 = cvPoint(blob->box.x, blob->box.y);
 
-        sprintf(label, "P%02d", blob->label);
+        sprintf(label, "%02d, A/R: %.2f, A: %.2f, S: %.2f", blob->label, blob->aspectRatio, blob->area, blob->avgSpeed);
 
         // Affichage d'une etiquette sur chaque boite
         CvFont font;
-        cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.5, 0.5, 0, 1, CV_AA);
+        cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 0.4, 0.4, 0, 1, CV_AA);
         cvPutText(frame, label, p1, &font, cvScalar(255, 255, 255, 0));
     }
 }
@@ -375,6 +385,7 @@ void drawLabels(IplImage* frame, Blob* blobs, int blobCount)
 void drawVelocityVectors(IplImage* frame, Blob* blobs, int blobCount)
 {
     Blob* blob;
+    char statusLabel[255];
 
     int b;
     for(b = 0; b < blobCount; b++)
