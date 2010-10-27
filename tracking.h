@@ -1,5 +1,19 @@
-#ifndef _FUSION_H_
-#define _FUSION_H_
+#ifndef _TRACKING_H_
+#define _TRACKING_H_
+
+typedef struct _track
+{
+    int label;
+    TrackClass classif;
+
+    float avgAspectRatio;
+
+    int avgDirX;
+    int avgDirY;
+    float avgSpeed;
+
+    CvSeq* historyTrail;
+} Track;
 
 typedef struct _metrics
 {
@@ -97,7 +111,7 @@ void association(Blob* blobs, Blob* pBlobs, DistMetrics* m, int assocMatrix[])
     }
 }
 
-void fusion(Blob* blobs, Blob* pBlobs, int blobCount, int pBlobCount)
+void fusion(Blob* blobs, int blobCount, Blob* pBlobs, int pBlobCount)
 {
     DistMetrics m;
     distanceMetrics(blobs, pBlobs, blobCount, pBlobCount, &m);
@@ -114,7 +128,7 @@ void fusion(Blob* blobs, Blob* pBlobs, int blobCount, int pBlobCount)
             blobs[b].label = pBlobs[index].label;
         else
             blobs[b].label = generateLabel();
-        }
+    }
 
     // Evaluation de la velocite pour chaque blob
     for(b = 0; b < blobCount; b++)
@@ -129,6 +143,21 @@ void fusion(Blob* blobs, Blob* pBlobs, int blobCount, int pBlobCount)
 
 void classify(Blob* blobs, int blobCount)
 {
+    int b;
+    for(b = 0; b < blobCount; b++)
+    {
+        if(blobs[b].avgSpeed > 10.0)
+        {
+            blobs[b].classif = VEHICLE;
+        }
+        else
+        {
+            if(blobs[b].aspectRatio < 0.8)
+                blobs[b].classif = PERSON;
+            else
+                blobs[b].classif = VEHICLE;
+        }
+    }
 }
 
 void writeDistanceMatrix(CvMat* mat)
